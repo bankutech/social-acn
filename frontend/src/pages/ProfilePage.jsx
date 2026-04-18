@@ -5,8 +5,8 @@ import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { motion } from 'framer-motion';
-import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3, Briefcase, GraduationCap } from 'lucide-react';
 
 export default function ProfilePage() {
   const { userId } = useParams();
@@ -29,12 +29,14 @@ export default function ProfilePage() {
         ? await api.get('/api/auth/profile')
         : await api.get(`/api/auth/profile/${userId}`);
       setProfile(profileData);
-      setIsFollowing(profileData.followers?.some(f => (f._id || f) === user?._id));
+      
+      const currentUserId = user?._id || user?.id;
+      setIsFollowing(profileData.followers?.some(f => (f._id || f) === currentUserId));
 
-      // Load user's posts from feed
+      // Load user's posts
       try {
         const feedPosts = await api.get('/api/posts/feed');
-        const userPosts = feedPosts.filter(p => p.author?._id === (userId || user?._id));
+        const userPosts = feedPosts.filter(p => (p.author?._id || p.author) === (userId || currentUserId));
         setPosts(userPosts);
       } catch {}
     } catch (err) {
@@ -53,185 +55,350 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="page-container">
-        <div className="page-header"><h1>Profile</h1></div>
+      <div className="premium-profile-layout">
         <SkeletonLoader type="profile" />
       </div>
     );
   }
 
   return (
-    <div className="page-container" style={{ padding: 0 }}>
+    <div className="premium-profile-layout">
+      {/* Dynamic Background */}
+      <div className="profile-banner-mesh"></div>
+
       {/* Header */}
-      <div className="page-header">
+      <header className="profile-glass-header">
         {!isOwnProfile && (
-          <button className="btn-icon" onClick={() => navigate(-1)}>
-            <ArrowLeft size={22} />
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            <ArrowLeft size={20} />
           </button>
         )}
-        <h1 style={{ fontSize: 18 }}>{profile?.name || 'Profile'}</h1>
-        <div className="page-header-actions">
+        <h1 className="header-username">{profile?.name}</h1>
+        <div className="header-actions">
           {isOwnProfile && (
-            <button className="btn-icon" onClick={() => navigate('/profile/edit')}>
-              <Settings size={22} />
+            <button className="settings-btn" onClick={() => navigate('/profile/edit')}>
+              <Settings size={20} />
             </button>
           )}
         </div>
-      </div>
+      </header>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        {/* Profile Info */}
-        <div className="profile-info">
-          <div className="profile-top-row">
-            <Avatar src={profile?.avatarUrl} name={profile?.name} size={86} />
-            <div className="profile-stats">
-              <div className="profile-stat">
-                <strong>{posts.length}</strong>
-                <span>Posts</span>
+      <main className="profile-scroll-area">
+        {/* Profile Card */}
+        <div className="profile-hero-card">
+          <div className="hero-top">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="portrait-wrapper"
+            >
+              <Avatar src={profile?.avatarUrl} name={profile?.name} size={110} />
+              {profile?.studyStreak > 0 && (
+                <div className="streak-badge">
+                  <Flame size={14} fill="#f97316" />
+                  <span>{profile.studyStreak}</span>
+                </div>
+              )}
+            </motion.div>
+
+            <div className="hero-stats">
+              <div className="stat-box">
+                <span className="stat-val">{posts.length}</span>
+                <span className="stat-lbl">Posts</span>
               </div>
-              <div className="profile-stat">
-                <strong>{profile?.followers?.length || 0}</strong>
-                <span>Followers</span>
+              <div className="stat-box">
+                <span className="stat-val">{profile?.followers?.length || 0}</span>
+                <span className="stat-lbl">Followers</span>
               </div>
-              <div className="profile-stat">
-                <strong>{profile?.following?.length || 0}</strong>
-                <span>Following</span>
+              <div className="stat-box">
+                <span className="stat-val">{profile?.following?.length || 0}</span>
+                <span className="stat-lbl">Following</span>
               </div>
             </div>
           </div>
 
-          <div className="profile-details">
-            <h2 className="profile-name">{profile?.name}</h2>
-            {profile?.bio && <p className="profile-bio">{profile?.bio}</p>}
-
-            {/* Study Streak */}
-            {(profile?.studyStreak > 0 || isOwnProfile) && (
-              <div className="profile-streak">
-                <Flame size={16} fill="#f97316" stroke="#f97316" />
-                <span>{profile?.studyStreak || 0} day streak</span>
-              </div>
-            )}
-
-            {/* Skills */}
-            {profile?.skills?.length > 0 && (
-              <div className="profile-skills">
-                {profile.skills.map(s => (
-                  <span key={s} className="badge">{s}</span>
-                ))}
-              </div>
-            )}
+          <div className="hero-bio-section">
+            <h2 className="display-name">{profile?.name}</h2>
+            <div className="title-tag">
+              <GraduationCap size={14} />
+              <span>ACN+ Student Member</span>
+            </div>
+            {profile?.bio && <p className="bio-text">{profile.bio}</p>}
+            
+            <div className="skill-cloud">
+              {profile?.skills?.map(s => (
+                <span key={s} className="skill-pill">{s}</span>
+              ))}
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="profile-actions">
+          <div className="hero-actions">
             {isOwnProfile ? (
-              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => navigate('/profile/edit')}>
-                Edit Profile
+              <button className="btn-edit-active" onClick={() => navigate('/profile/edit')}>
+                Edit Personal Portfolio
               </button>
             ) : (
-              <>
-                <button
-                  className={isFollowing ? 'btn-secondary' : 'btn-primary'}
-                  style={{ flex: 1 }}
+              <div className="action-button-row">
+                <button 
+                  className={isFollowing ? "btn-unfollow" : "btn-follow-cta"} 
                   onClick={handleFollow}
                 >
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isFollowing ? 'Following' : 'Connect +'}
                 </button>
-                <button className="btn-secondary" onClick={() => navigate(`/chat/${userId}`)} style={{ flex: 1 }}>
-                  <MessageCircle size={16} /> Message
+                <button className="btn-message-circle" onClick={() => navigate(`/chat/${userId}`)}>
+                  <MessageCircle size={18} />
                 </button>
-                <button className="btn-outline" onClick={() => navigate(`/partner-chat/${userId}`)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center', fontSize: 13 }}>
-                  <Heart size={14} /> Partner Chat
+                <button className="btn-partner-heart" onClick={() => navigate(`/partner-chat/${userId}`)}>
+                  <Heart size={18} />
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Posts Grid */}
-        <div style={{ borderTop: '1px solid var(--border-color)' }}>
-          <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', justifyContent: 'center' }}>
-            <Grid3X3 size={18} />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>POSTS</span>
-          </div>
-          {posts.length === 0 ? (
-            <div className="empty-state" style={{ padding: '30px 20px' }}>
-              <p>No posts yet</p>
+        {/* Content Section */}
+        <div className="profile-content-grid">
+          <div className="section-tab-header">
+            <div className="active-tab">
+              <Grid3X3 size={18} />
+              <span>ACADEMIC FEED</span>
             </div>
-          ) : (
-            posts.map(post => <PostCard key={post._id} post={post} onUpdate={loadProfile} />)
-          )}
+          </div>
+
+          <div className="posts-stack">
+            {posts.length === 0 ? (
+              <div className="empty-portfolio">
+                <Briefcase size={40} />
+                <p>Knowledge base is currently empty.</p>
+              </div>
+            ) : (
+              posts.map((post, i) => (
+                <motion.div 
+                  key={post._id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <PostCard post={post} onUpdate={loadProfile} />
+                </motion.div>
+              ))
+            )}
+          </div>
         </div>
-      </motion.div>
+      </main>
 
       <style>{`
-        .profile-info {
-          padding: 20px 16px;
+        .premium-profile-layout {
+          background: #000000;
+          min-height: 100vh;
+          position: relative;
+          color: white;
+          padding-bottom: 90px;
         }
-        .profile-top-row {
+
+        .profile-banner-mesh {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 240px;
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%);
+          filter: blur(60px);
+          z-index: 0;
+        }
+
+        .profile-glass-header {
+          position: sticky;
+          top: 0;
+          height: 64px;
           display: flex;
           align-items: center;
-          gap: 24px;
-          margin-bottom: 16px;
+          justify-content: space-between;
+          padding: 0 20px;
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(12px);
+          z-index: 100;
         }
-        .profile-stats {
+
+        .header-username {
+          font-size: 15px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+        }
+
+        .profile-scroll-area {
+          position: relative;
+          z-index: 10;
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 0 16px;
+        }
+
+        .profile-hero-card {
+          background: rgba(15, 15, 18, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 32px;
+          padding: 24px;
+          margin-top: 20px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .hero-top {
           display: flex;
-          gap: 24px;
-          flex: 1;
-          justify-content: center;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 24px;
         }
-        .profile-stat {
+
+        .portrait-wrapper {
+          position: relative;
+        }
+        .streak-badge {
+          position: absolute;
+          bottom: -4px;
+          right: -4px;
+          background: black;
+          border: 1px solid #f97316;
+          border-radius: 12px;
+          padding: 2px 8px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .hero-stats {
+          flex: 1;
+          display: flex;
+          justify-content: space-around;
+        }
+        .stat-box {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 2px;
         }
-        .profile-stat strong {
-          font-size: 18px;
-          font-weight: 700;
+        .stat-val {
+          font-size: 20px;
+          font-weight: 800;
         }
-        .profile-stat span {
+        .stat-lbl {
           font-size: 12px;
-          color: var(--text-muted);
+          color: rgba(255, 255, 255, 0.5);
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
-        .profile-details {
-          margin-bottom: 16px;
+
+        .hero-bio-section {
+          margin-bottom: 24px;
         }
-        .profile-name {
-          font-size: 16px;
-          font-weight: 700;
+        .display-name {
+          font-size: 24px;
+          font-weight: 800;
           margin-bottom: 4px;
         }
-        .profile-bio {
-          font-size: 14px;
-          color: var(--text-secondary);
-          margin-bottom: 8px;
-          line-height: 1.4;
-        }
-        .profile-streak {
-          display: inline-flex;
+        .title-tag {
+          display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
           font-size: 13px;
-          font-weight: 600;
-          color: #f97316;
-          margin-bottom: 8px;
+          color: #a78bfa;
+          margin-bottom: 12px;
         }
-        .profile-skills {
+        .bio-text {
+          font-size: 15px;
+          line-height: 1.6;
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 16px;
+        }
+
+        .skill-cloud {
           display: flex;
           flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 4px;
-        }
-        .profile-actions {
-          display: flex;
           gap: 8px;
         }
-        .profile-actions button {
+        .skill-pill {
+          background: rgba(255, 255, 255, 0.05);
+          padding: 6px 14px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .hero-actions {
+          display: flex;
+          gap: 12px;
+        }
+        .btn-edit-active {
+          width: 100%;
+          padding: 14px;
+          background: white;
+          color: black;
+          border-radius: 16px;
+          font-weight: 700;
+          font-size: 14px;
+        }
+        
+        .action-button-row {
+          display: flex;
+          width: 100%;
+          gap: 10px;
+        }
+        .btn-follow-cta {
+          flex: 2;
+          background: white;
+          color: black;
+          border-radius: 14px;
+          font-weight: 700;
+        }
+        .btn-unfollow {
+          flex: 2;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: white;
+          border-radius: 14px;
+          font-weight: 700;
+        }
+        .btn-message-circle, .btn-partner-heart {
+          flex: 1;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+        }
+        .btn-partner-heart { color: #ec4899; }
+
+        .section-tab-header {
+          display: flex;
+          justify-content: center;
+          padding: 24px 0 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          margin-bottom: 20px;
+        }
+        .active-tab {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 1px;
+          color: white;
+          padding: 8px 16px;
+          border-bottom: 2px solid white;
+        }
+
+        .posts-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .empty-portfolio {
+          text-align: center;
+          padding: 40px;
+          color: rgba(255, 255, 255, 0.3);
         }
       `}</style>
     </div>

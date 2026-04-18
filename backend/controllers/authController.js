@@ -163,11 +163,11 @@ exports.toggleFollow = async (req, res) => {
 
         if (!target) return res.status(404).json({ message: 'User not found' });
 
-        const isFollowing = user.following.includes(targetId);
+        const isFollowing = user.following.some(id => id.toString() === targetId);
 
         if (isFollowing) {
-            user.following.pull(targetId);
-            target.followers.pull(userId);
+            user.following = user.following.filter(id => id.toString() !== targetId);
+            target.followers = target.followers.filter(id => id.toString() !== userId.toString());
         } else {
             user.following.push(targetId);
             target.followers.push(userId);

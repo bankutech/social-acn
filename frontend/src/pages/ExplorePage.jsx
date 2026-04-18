@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { motion } from 'framer-motion';
-import { Search, UserPlus, UserCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, UserPlus, UserCheck, Sparkles, TrendingUp, Users } from 'lucide-react';
 
 export default function ExplorePage() {
   const { user } = useAuth();
@@ -54,94 +54,255 @@ export default function ExplorePage() {
   const displayUsers = search.trim() ? searchResults : users;
 
   return (
-    <div className="page-container" style={{ padding: 0 }}>
-      <div className="page-header">
-        <h1>Explore</h1>
-      </div>
-
-      {/* Search */}
-      <div style={{ padding: '10px 16px' }}>
-        <div style={{ position: 'relative' }}>
-          <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+    <div className="premium-explore-layout">
+      {/* Search Header */}
+      <header className="explore-premium-header">
+        <div className="search-pill-container">
+          <Search size={18} className="search-icon-inside" />
           <input
-            placeholder="Search people..."
+            className="premium-search-input"
+            placeholder="Search the ACN+ network..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ paddingLeft: 42 }}
           />
+          {search && (
+            <button className="search-clear" onClick={() => setSearch('')}>
+              <X size={14} />
+            </button>
+          )}
         </div>
-      </div>
+      </header>
 
-      {!search.trim() && (
-        <div style={{ padding: '8px 16px 4px', fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 0.5 }}>
-          SUGGESTED FOR YOU
-        </div>
-      )}
+      <main className="explore-content-area">
+        {!search.trim() && (
+          <div className="discovery-header">
+            <div className="discovery-title">
+              <TrendingUp size={16} />
+              <span>Recommended Students</span>
+            </div>
+            <p className="discovery-subtitle">Expand your network with like-minded peers</p>
+          </div>
+        )}
 
-      {loading ? (
-        <SkeletonLoader type="chat" count={6} />
-      ) : displayUsers.length === 0 ? (
-        <div className="empty-state">
-          <Search size={48} />
-          <h3>{search ? 'No users found' : 'No suggestions'}</h3>
-          <p>Try searching for people by name or email</p>
-        </div>
-      ) : (
-        displayUsers.map((u, i) => {
-          const isFollowed = followingMap[u._id] ?? u.followers?.some(f => (f._id || f) === user?._id);
-          return (
-            <motion.div
-              key={u._id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              className="explore-user"
-            >
-              <div className="explore-user-info" onClick={() => navigate(`/profile/${u._id}`)}>
-                <Avatar src={u.avatarUrl} name={u.name} size={52} />
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>{u.name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                    {u.bio ? u.bio.slice(0, 50) : u.skills?.slice(0, 3).join(' · ') || 'ACN+ Member'}
-                  </div>
-                  {u.followers && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                      {u.followers.length} followers
-                    </div>
-                  )}
-                </div>
+        <div className="explorer-grid">
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <div style={{ padding: 16 }}>
+                {[1, 2, 3, 4].map(i => <div key={i} className="skeleton-explorer-row" />)}
               </div>
-              <button
-                className={isFollowed ? 'btn-secondary' : 'btn-primary'}
-                onClick={() => handleFollow(u._id)}
-                style={{ padding: '8px 16px', fontSize: 13 }}
+            ) : displayUsers.length === 0 ? (
+              <motion.div
+                className="no-results-premium"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
               >
-                {isFollowed ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
-              </button>
-            </motion.div>
-          );
-        })
-      )}
+                <div className="no-result-icon">
+                  <Users size={40} />
+                </div>
+                <h3>Silence in the network</h3>
+                <p>We couldn't find anyone matching "{search}". Try another term.</p>
+              </motion.div>
+            ) : (
+              displayUsers.map((u, i) => {
+                const currentUserId = user?._id || user?.id;
+                const isFollowed = followingMap[u._id] ?? u.followers?.some(f => (f._id || f) === currentUserId);
+                
+                return (
+                  <motion.div
+                    key={u._id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="premium-user-card"
+                  >
+                    <div className="card-user-meta" onClick={() => navigate(`/profile/${u._id}`)}>
+                      <div className="avatar-ring">
+                        <Avatar src={u.avatarUrl} name={u.name} size={60} />
+                      </div>
+                      <div className="user-text-meta">
+                        <div className="user-row-top">
+                          <h4 className="u-name">{u.name}</h4>
+                        </div>
+                        <p className="u-bio">
+                          {u.bio ? u.bio.slice(0, 60) + (u.bio.length > 60 ? '...' : '') : 
+                           u.skills?.length > 0 ? u.skills.slice(0, 2).join(' · ') : 'ACN+ Student'}
+                        </p>
+                        <div className="u-stats-mini">
+                          <Users size={12} />
+                          <span>{u.followers?.length || 0} followers</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button
+                      className={isFollowed ? 'btn-following-pill' : 'btn-follow-pill'}
+                      onClick={() => handleFollow(u._id)}
+                    >
+                      {isFollowed ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                      <span>{isFollowed ? 'Following' : 'Follow'}</span>
+                    </button>
+                  </motion.div>
+                );
+              })
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
 
       <style>{`
-        .explore-user {
+        .premium-explore-layout {
+          background: #000000;
+          min-height: 100vh;
+          color: white;
+          padding-bottom: 90px;
+        }
+
+        .explore-premium-header {
+          position: sticky;
+          top: 0;
+          background: rgba(0, 0, 0, 0.82);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          padding: 16px;
+          z-index: 100;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .search-pill-container {
+          position: relative;
+          max-width: 600px;
+          margin: 0 auto;
+          display: flex;
+          align-items: center;
+        }
+
+        .search-icon-inside {
+          position: absolute;
+          left: 16px;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .premium-search-input {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          padding: 14px 16px 14px 48px;
+          color: white;
+          font-size: 15px;
+          transition: all 0.2s;
+        }
+        .premium-search-input:focus {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: #a78bfa;
+          box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.1);
+        }
+
+        .explore-content-area {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 24px 16px;
+        }
+
+        .discovery-header {
+          margin-bottom: 24px;
+        }
+        .discovery-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 11px;
+          font-weight: 800;
+          color: #a78bfa;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+          margin-bottom: 8px;
+        }
+        .discovery-subtitle {
+          font-size: 20px;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .explorer-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .premium-user-card {
+          background: rgba(15, 15, 18, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          padding: 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 16px;
           gap: 12px;
-          transition: background 0.15s;
+          transition: all 0.2s;
         }
-        .explore-user:hover {
-          background: var(--bg-hover);
-        }
-        .explore-user-info {
+        .premium-user-card:hover { border-color: rgba(255, 255, 255, 0.12); background: rgba(20, 20, 25, 0.8); }
+
+        .card-user-meta {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 16px;
           flex: 1;
-          min-width: 0;
           cursor: pointer;
+        }
+
+        .avatar-ring {
+          padding: 2px;
+          border-radius: 50%;
+          border: 2px solid transparent;
+          transition: border-color 0.3s;
+        }
+        .premium-user-card:hover .avatar-ring { border-color: #a78bfa; }
+
+        .user-text-meta {
+          min-width: 0;
+        }
+        .u-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .u-bio { font-size: 13px; color: rgba(255, 255, 255, 0.5); line-height: 1.4; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .u-stats-mini { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #a78bfa; font-weight: 600; }
+
+        .btn-follow-pill, .btn-following-pill {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 18px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 700;
+          transition: all 0.2s;
+        }
+
+        .btn-follow-pill { background: white; color: black; }
+        .btn-follow-pill:hover { transform: scale(1.05); }
+        
+        .btn-following-pill { background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        .no-results-premium {
+          text-align: center;
+          padding: 60px 20px;
+        }
+        .no-result-icon {
+          width: 80px;
+          height: 80px;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          color: rgba(255,255,255,0.2);
+        }
+
+        .skeleton-explorer-row {
+          height: 80px;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 20px;
+          margin-bottom: 12px;
         }
       `}</style>
     </div>

@@ -4,8 +4,8 @@ import api from '../lib/api';
 import StoryBar from '../components/StoryBar';
 import PostCard from '../components/PostCard';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { motion } from 'framer-motion';
-import { Sparkles, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, Search, Bell, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function FeedPage() {
@@ -34,56 +34,288 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>ACN+</h1>
-        <div className="page-header-actions">
-          <button className="btn-icon" onClick={() => navigate('/explore')}>
-            <Search size={22} />
+    <div className="premium-feed-layout">
+      {/* Premium Sticky Header */}
+      <header className="premium-nav-header">
+        <div className="nav-header-left">
+          <motion.div 
+            className="mini-brand"
+            whileHover={{ scale: 1.05 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            A+
+          </motion.div>
+          <h1 className="nav-title">ACN<span className="plus-accent">+</span></h1>
+        </div>
+        
+        <div className="nav-header-actions">
+          <button className="nav-action-btn" onClick={() => navigate('/explore')} title="Search">
+            <Search size={20} />
           </button>
-          <button className="btn-icon" onClick={() => navigate('/ai')}>
-            <Sparkles size={22} />
+          <button className="nav-action-btn" onClick={() => navigate('/ai')} title="AI Assistant">
+            <Sparkles size={20} className="ai-spark-icon" />
+          </button>
+          <button className="nav-action-btn" onClick={() => navigate('/notifications')} title="Notifications">
+            <Bell size={20} />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Stories */}
-      {loading ? (
-        <SkeletonLoader type="story" count={6} />
-      ) : (
-        <StoryBar stories={stories} onRefresh={loadFeed} />
-      )}
+      <main className="feed-content-area">
+        {/* Story Section */}
+        <section className="stories-section">
+          {loading ? (
+            <div className="stories-skeleton-row">
+              {[1, 2, 3, 4, 5].map(i => <div key={i} className="skeleton-circle-story" />)}
+            </div>
+          ) : (
+            <StoryBar stories={stories} onRefresh={loadFeed} />
+          )}
+        </section>
 
-      {/* Feed */}
-      <div style={{ padding: '8px 0' }}>
-        {loading ? (
-          <SkeletonLoader type="post" count={3} />
-        ) : posts.length === 0 ? (
-          <motion.div
-            className="empty-state"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <Sparkles size={64} />
-            <h3>Your feed is empty</h3>
-            <p>Follow other students to see their posts, or create your first post!</p>
-            <button className="btn-primary" onClick={() => navigate('/explore')} style={{ marginTop: 8 }}>
-              Discover People
-            </button>
-          </motion.div>
-        ) : (
-          posts.map((post, i) => (
-            <motion.div
-              key={post._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <PostCard post={post} onUpdate={loadFeed} />
-            </motion.div>
-          ))
-        )}
-      </div>
+        {/* Global Post Feed */}
+        <div className="post-feed-container">
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <div className="feed-skeleton-stack">
+                {[1, 2, 3].map(i => <div key={i} className="skeleton-card-premium" />)}
+              </div>
+            ) : posts.length === 0 ? (
+              <motion.div
+                className="premium-empty-feed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="empty-icon-wrapper">
+                  <Sparkles size={48} />
+                </div>
+                <h3>Your World awaits</h3>
+                <p>Start following other students to see their updates and materials here.</p>
+                <button className="btn-premium-accent" onClick={() => navigate('/explore')}>
+                  Find brilliant minds
+                </button>
+              </motion.div>
+            ) : (
+              posts.map((post, i) => (
+                <motion.div
+                  key={post._id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08, duration: 0.5 }}
+                  className="feed-post-item"
+                >
+                  <PostCard post={post} onUpdate={loadFeed} />
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
+
+      {/* Floating Create Button */}
+      <motion.button 
+        className="floating-add-btn"
+        whileHover={{ scale: 1.1, rotate: 90 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => navigate('/create')}
+      >
+        <PlusCircle size={32} />
+      </motion.button>
+
+      <style>{`
+        .premium-feed-layout {
+          background: #000000;
+          min-height: 100vh;
+          padding-top: 72px; /* Header space */
+          padding-bottom: 90px; /* Nav space */
+        }
+
+        /* STICKY HEADER */
+        .premium-nav-header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 72px;
+          background: rgba(0, 0, 0, 0.8);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 20px;
+          z-index: 1000;
+        }
+
+        .nav-header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .mini-brand {
+          width: 32px;
+          height: 32px;
+          background: white;
+          color: black;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 14px;
+          cursor: pointer;
+        }
+
+        .nav-title {
+          font-size: 22px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          color: white;
+        }
+        .plus-accent {
+          color: #a78bfa;
+        }
+
+        .nav-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .nav-action-btn {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(255, 255, 255, 0.6);
+          transition: all 0.2s;
+        }
+        .nav-action-btn:hover {
+          background: rgba(255, 255, 255, 0.05);
+          color: white;
+        }
+        .ai-spark-icon {
+          color: #22d3ee;
+        }
+
+        /* CONTENT AREA */
+        .feed-content-area {
+          max-width: 600px;
+          margin: 0 auto;
+        }
+
+        .stories-section {
+          padding: 8px 0 20px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          margin-bottom: 20px;
+        }
+        
+        .stories-skeleton-row {
+          display: flex;
+          gap: 16px;
+          padding: 0 16px;
+          overflow: hidden;
+        }
+        .skeleton-circle-story {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.05);
+          flex-shrink: 0;
+        }
+
+        .post-feed-container {
+          padding: 0 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .feed-post-item {
+          background: rgba(15, 15, 18, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          border-radius: 20px;
+          overflow: hidden;
+          transition: transform 0.3s ease;
+        }
+        .feed-post-item:hover {
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* EMPTY STATE */
+        .premium-empty-feed {
+          text-align: center;
+          padding: 80px 40px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .empty-icon-wrapper {
+          width: 100px;
+          height: 100px;
+          background: rgba(167, 139, 250, 0.05);
+          border-radius: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #a78bfa;
+          margin-bottom: 24px;
+        }
+        .premium-empty-feed h3 {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 12px;
+        }
+        .premium-empty-feed p {
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 15px;
+          line-height: 1.6;
+          margin-bottom: 32px;
+        }
+        .btn-premium-accent {
+          background: white;
+          color: black;
+          padding: 14px 28px;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 14px;
+          transition: transform 0.2s;
+        }
+        .btn-premium-accent:hover { transform: scale(1.05); }
+
+        /* FLOATING ACTION */
+        .floating-add-btn {
+          position: fixed;
+          bottom: calc(var(--bottom-nav-height, 70px) + 24px);
+          right: 24px;
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #7c3aed, #a78bfa);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 12px 32px rgba(124, 58, 237, 0.4);
+          z-index: 900;
+        }
+
+        /* SKELETONS */
+        .feed-skeleton-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .skeleton-card-premium {
+          height: 400px;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 20px;
+        }
+      `}</style>
     </div>
   );
 }

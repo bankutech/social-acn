@@ -11,18 +11,6 @@ const protect = async (req, res, next) => {
             // Note: Use a default secret if env is not loaded for testing
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_123');
             
-            // Handle demo mode mock user
-            if (decoded.id === 'mock_id_123') {
-                req.user = {
-                    _id: 'mock_id_123',
-                    name: 'Demo Student',
-                    email: 'demo@acn.plus',
-                    avatarUrl: 'https://i.pravatar.cc/150?u=mock',
-                    studyStreak: 5,
-                    following: []
-                };
-                return next();
-            }
             
             req.user = await User.findById(decoded.id).select('-password');
             next();
