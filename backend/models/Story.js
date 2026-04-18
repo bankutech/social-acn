@@ -1,0 +1,12 @@
+const mongoose = require('mongoose');
+
+const StorySchema = new mongoose.Schema({
+    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    content: { type: String, required: true },
+    type: { type: String, enum: ['text', 'image'], default: 'text' },
+    imageUrl: { type: String },
+    viewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    expiresAt: { type: Date, default: Date.now, expires: 86400 } // Auto-delete after 24 hours
+}, { timestamps: true });
+
+module.exports = mongoose.model('Story', StorySchema);
