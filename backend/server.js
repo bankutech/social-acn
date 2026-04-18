@@ -13,6 +13,20 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+// Global state for health check
+let dbConnected = false;
+
+// Middleware to check DB status
+const checkDbConnection = (req, res, next) => {
+    if (!dbConnected && !req.path.includes('/health')) {
+        return res.status(503).json({ 
+            message: 'Database is currently unavailable. Please check the backend logs for network/whitelist issues.',
+            status: 'error'
+        });
+    }
+    next();
+};
+
 // Make io available to routes
 app.set('io', io);
 
@@ -34,6 +48,8 @@ const aiRoutes = require('./routes/aiRoutes');
 const partnerChatRoutes = require('./routes/partnerChatRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 
+app.use(checkDbConnection);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/stories', storyRoutes);
@@ -43,13 +59,27 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/partner-chat', partnerChatRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// Health check route
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: dbConnected ? 'ok' : 'error', 
+        database: dbConnected ? 'connected' : 'disconnected',
+        timestamp: new Date()
+    });
+});
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/acn_plus')
-    .then(() => console.log('MongoDB Connected successfully'))
+    .then(() => {
+        console.log('✅ MongoDB Connected successfully');
+        dbConnected = true;
+    })
     .catch(err => {
-        console.error('CRITICAL: MongoDB Connection Failed. The app requires a real database to function.');
-        console.error('Reason:', err.message);
-        process.exit(1);
+        console.error('❌ CRITICAL: MongoDB Connection Failed.');
+        console.error('REASON:', err.message);
+        console.error('ACTION REQUIRED: Check your IP Whitelist in MongoDB Atlas and ensure 0.0.0.0/0 is allowed.');
+        dbConnected = false;
+        // Do NOT process.exit(1) so the server can at least respond with a "DB Down" message to the frontend
     });
 
 // Initial Route
