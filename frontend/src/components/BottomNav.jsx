@@ -1,162 +1,140 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Compass, PlusSquare, MessageCircle, User, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Home, Compass, Plus, MessageCircle, User } from 'lucide-react';
 
 const navItems = [
-  { path: '/', icon: Home, label: 'Feed' },
-  { path: '/explore', icon: Compass, label: 'Explore' },
-  { path: '/create', icon: PlusSquare, label: 'Post' },
-  { path: '/chat', icon: MessageCircle, label: 'Chat' },
-  { path: '/profile', icon: User, label: 'You' },
+  { path: '/',        icon: Home,          label: 'Feed'    },
+  { path: '/explore', icon: Compass,       label: 'Explore' },
+  { path: '/create',  icon: Plus,          label: 'Post',   isCreate: true },
+  { path: '/chat',    icon: MessageCircle, label: 'Chat'    },
+  { path: '/profile', icon: User,          label: 'You'     },
 ];
 
 export default function BottomNav() {
   const location = useLocation();
-  
-  // Hide on certain pages
+
   const hideOn = ['/login', '/signup'];
   if (hideOn.includes(location.pathname)) return null;
-  // Hide on chat detail pages
   if (location.pathname.match(/^\/chat\/.+/) || location.pathname.match(/^\/partner-chat\/.+/)) return null;
 
   return (
-    <nav className="glass-nav-container">
-      <div className="glass-nav-dock">
-        {navItems.map(({ path, icon: Icon, label }) => {
-          const isActive = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
-          
+    <nav style={{
+      position: 'fixed',
+      bottom: 0, left: 0, right: 0,
+      zIndex: 1000,
+      display: 'flex',
+      justifyContent: 'center',
+      padding: '0 0 env(safe-area-inset-bottom, 0px)',
+      pointerEvents: 'none'
+    }}>
+      <div style={{
+        pointerEvents: 'auto',
+        width: '100%',
+        maxWidth: 480,
+        background: 'rgba(10,10,12,0.96)',
+        backdropFilter: 'blur(20px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        borderTop: '0.5px solid rgba(255,255,255,0.07)',
+        display: 'flex',
+        alignItems: 'stretch',
+        padding: '6px 4px 8px',
+        gap: 0
+      }}>
+        {navItems.map(({ path, icon: Icon, label, isCreate, badge }) => {
+          const isActive = path === '/'
+            ? location.pathname === '/'
+            : location.pathname.startsWith(path);
+
           return (
-            <NavLink key={path} to={path} className="nav-dock-item">
-              <div className="item-content">
-                <motion.div
-                  className={`nav-icon-wrapper ${isActive ? 'active' : ''}`}
-                  whileTap={{ scale: 0.85 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                >
-                  <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
-                  {isActive && (
-                    <motion.div 
-                      layoutId="nav-glow" 
-                      className="nav-active-glow"
-                      initial={false}
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+            <NavLink
+              key={path}
+              to={path}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                textDecoration: 'none',
+                padding: '4px 0',
+                WebkitTapHighlightColor: 'transparent'
+              }}
+            >
+              <motion.div
+                whileTap={{ scale: 0.82 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                style={{ position: 'relative' }}
+              >
+                {isCreate ? (
+                  /* ── Create button: gradient pill ── */
+                  <div style={{
+                    width: 48, height: 32,
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 16px rgba(99,102,241,0.45)'
+                  }}>
+                    <Icon size={20} color="white" strokeWidth={2.5} />
+                  </div>
+                ) : (
+                  /* ── Regular icon ── */
+                  <div style={{
+                    width: 48, height: 32,
+                    borderRadius: 12,
+                    background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'background 0.2s'
+                  }}>
+                    <Icon
+                      size={22}
+                      color={isActive ? 'white' : 'rgba(255,255,255,0.38)'}
+                      strokeWidth={isActive ? 2.2 : 1.7}
+                      fill={isActive && path === '/' ? 'white' : 'none'}
                     />
-                  )}
-                </motion.div>
-                <span className={`nav-dock-label ${isActive ? 'active' : ''}`}>{label}</span>
-              </div>
+                  </div>
+                )}
+
+                {/* Notification badge */}
+                {badge && (
+                  <div style={{
+                    position: 'absolute', top: 2, right: 6,
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: '#ef4444',
+                    border: '1.5px solid rgba(10,10,12,0.96)'
+                  }} />
+                )}
+              </motion.div>
+
+              {/* Label */}
+              <span style={{
+                fontSize: 10,
+                fontWeight: isActive ? 700 : 500,
+                color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
+                letterSpacing: '0.3px',
+                transition: 'color 0.2s',
+                lineHeight: 1
+              }}>
+                {label}
+              </span>
+
+              {/* Active dot */}
+              {isActive && !isCreate && (
+                <motion.div
+                  layoutId="nav-dot"
+                  style={{
+                    width: 4, height: 4, borderRadius: '50%',
+                    background: 'white',
+                    position: 'absolute',
+                    bottom: -2
+                  }}
+                  transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
+                />
+              )}
             </NavLink>
           );
         })}
       </div>
-
-      <style>{`
-        .glass-nav-container {
-          position: fixed;
-          bottom: 24px;
-          left: 0;
-          right: 0;
-          display: flex;
-          justify-content: center;
-          padding: 0 20px;
-          pointer-events: none;
-          z-index: 1000;
-        }
-
-        .glass-nav-dock {
-          pointer-events: auto;
-          background: rgba(15, 15, 18, 0.7);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 28px;
-          display: flex;
-          align-items: center;
-          padding: 8px 12px;
-          gap: 4px;
-          box-shadow: 
-            0 20px 40px rgba(0, 0, 0, 0.4),
-            0 0 0 1px rgba(255, 255, 255, 0.05);
-          max-width: 440px;
-          width: 100%;
-          justify-content: space-around;
-        }
-
-        .nav-dock-item {
-          text-decoration: none;
-          flex: 1;
-          display: flex;
-          justify-content: center;
-          position: relative;
-        }
-
-        .item-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 2px;
-          padding: 6px 0;
-        }
-
-        .nav-icon-wrapper {
-          position: relative;
-          color: rgba(255, 255, 255, 0.4);
-          width: 44px;
-          height: 38px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: color 0.3s;
-        }
-
-        .nav-icon-wrapper.active {
-          color: #a78bfa;
-        }
-
-        .nav-active-glow {
-          position: absolute;
-          width: 32px;
-          height: 12px;
-          background: #7c3aed;
-          bottom: -14px;
-          filter: blur(14px);
-          opacity: 0.6;
-          z-index: -1;
-        }
-
-        .nav-dock-label {
-          font-size: 10px;
-          font-weight: 700;
-          color: rgba(255, 255, 255, 0.3);
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          transition: all 0.3s;
-        }
-
-        .nav-dock-label.active {
-          color: white;
-          opacity: 1;
-        }
-
-        /* MOBILE OPTIMIZATION */
-        @media (max-width: 480px) {
-          .glass-nav-container {
-            bottom: 12px;
-            padding: 0 12px;
-          }
-          .glass-nav-dock {
-            padding: 6px 8px;
-            border-radius: 24px;
-            gap: 2px;
-          }
-          .nav-dock-label {
-            display: none;
-          }
-          .nav-icon-wrapper {
-            height: 44px;
-          }
-        }
-      `}</style>
     </nav>
   );
 }

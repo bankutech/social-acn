@@ -9,289 +9,319 @@ import { Heart, MessageCircle, Bookmark, MoreHorizontal, Send, Trash2 } from 'lu
 export default function PostCard({ post, onUpdate }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [liked, setLiked] = useState(post.likes?.some(l => (l._id || l) === user?._id));
-  const [likesCount, setLikesCount] = useState(post.likes?.length || 0);
-  const [saved, setSaved] = useState(
-    post.savedBy?.some(s => String(s?._id || s) === String(user?._id))
-  );
+
+  const [liked, setLiked]             = useState(post.likes?.some(l => (l._id || l) === user?._id) || false);
+  const [likesCount, setLikesCount]   = useState(post.likes?.length || 0);
+  const [saved, setSaved]             = useState(post.savedBy?.some(s => String(s?._id || s) === String(user?._id)) || false);
   const [showComments, setShowComments] = useState(false);
-  const [comment, setComment] = useState('');
-  const [comments, setComments] = useState(post.comments || []);
-  const [heartAnim, setHeartAnim] = useState(false);
-  const [deleted, setDeleted] = useState(false);
+  const [comment, setComment]         = useState('');
+  const [comments, setComments]       = useState(post.comments || []);
+  const [heartAnim, setHeartAnim]     = useState(false);
+  const [showMenu, setShowMenu]       = useState(false);
+
   const isOwner = user?._id === (post.author?._id || post.author);
 
   const handleLike = async () => {
+    const prev = liked;
+    const prevCount = likesCount;
+    setLiked(!prev);
+    setLikesCount(c => c + (prev ? -1 : 1));
+    if (!prev) { setHeartAnim(true); setTimeout(() => setHeartAnim(false), 700); }
     try {
       const res = await api.post(`/api/posts/${post._id}/like`);
       setLiked(res.liked);
       setLikesCount(res.likesCount);
-      if (res.liked) {
-        setHeartAnim(true);
-        setTimeout(() => setHeartAnim(false), 600);
-      }
-    } catch {}
+    } catch {
+      setLiked(prev);
+      setLikesCount(prevCount);
+    }
+  };
+
+  const handleDoubleTap = () => {
+    if (!liked) handleLike();
+    else { setHeartAnim(true); setTimeout(() => setHeartAnim(false), 700); }
   };
 
   const handleSave = async () => {
+    const prev = saved;
+    setSaved(!prev);
     try {
       const res = await api.post(`/api/posts/${post._id}/save`);
       setSaved(res.saved);
-    } catch {}
+    } catch { setSaved(prev); }
   };
 
   const handleComment = async () => {
     if (!comment.trim()) return;
     try {
       const res = await api.post(`/api/posts/${post._id}/comment`, { content: comment });
-      setComments([...comments, res]);
+      setComments(prev => [...prev, res]);
       setComment('');
     } catch {}
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+    setShowMenu(false);
+    if (!window.confirm('Delete this post?')) return;
     try {
       await api.delete(`/api/posts/${post._id}`);
-      setDeleted(true);
       if (onUpdate) onUpdate();
-    } catch (err) {
-      alert(err.message || 'Failed to delete post');
-    }
+    } catch (err) { alert(err.message || 'Failed to delete'); }
+  };
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: post.content, url: window.location.href });
+      else { await navigator.clipboard.writeText(window.location.href); }
+    } catch {}
   };
 
   const timeAgo = (date) => {
     const s = Math.floor((Date.now() - new Date(date)) / 1000);
-    if (s < 60) return 'now';
-    if (s < 3600) return `${Math.floor(s/60)}m`;
-    if (s < 86400) return `${Math.floor(s/3600)}h`;
-    return `${Math.floor(s/86400)}d`;
+    if (s < 60) return 'Just now';
+    if (s < 3600) return `${Math.floor(s / 60)}m`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h`;
+    if (s < 604800) return `${Math.floor(s / 86400)}d`;
+    return new Date(date).toLocaleDateString();
   };
 
   return (
-    <div className="post-card card">
-      {/* Header */}
-      <div className="post-header">
-        <div className="post-author" onClick={() => navigate(`/profile/${post.author?._id}`)} style={{ cursor: 'pointer' }}>
-          <Avatar src={post.author?.avatarUrl} name={post.author?.name} size={38} />
-          <div>
-            <div className="post-author-name">{post.author?.name}</div>
-            <div className="post-time">{timeAgo(post.createdAt)}</div>
-          </div>
-        </div>
-        {isOwner ? (
-          <button className="btn-icon btn-delete-post" onClick={handleDelete} title="Delete post">
-            <Trash2 size={16} />
-          </button>
-        ) : (
-          <button className="btn-icon"><MoreHorizontal size={18} /></button>
-        )}
-      </div>
+    <div style={{ background: '#000', borderBottom: '0.5px solid rgba(255,255,255,0.08)', marginBottom: 0 }}>
 
-      {/* Content */}
-      <div className="post-content">
-        {post.content && <p className="post-text">{post.content}</p>}
-        {post.type === 'image' && post.imageUrl && (
-          <div className="post-image-wrap" onDoubleClick={handleLike}>
-            <img src={api.getFileUrl(post.imageUrl)} alt="" className="post-image" />
-            <AnimatePresence>
-              {heartAnim && (
-                <motion.div
-                  className="double-tap-heart"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Heart size={80} fill="white" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-        {post.type === 'code' && post.codeSnippet && (
-          <pre className="post-code">{post.codeSnippet}</pre>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="post-actions">
-        <div className="post-actions-left">
-          <motion.button
-            className="post-action-btn"
-            onClick={handleLike}
-            whileTap={{ scale: 0.8 }}
-          >
-            <Heart size={22} fill={liked ? '#ef4444' : 'none'} stroke={liked ? '#ef4444' : 'currentColor'} />
-          </motion.button>
-          <button className="post-action-btn" onClick={() => setShowComments(!showComments)}>
-            <MessageCircle size={22} />
-          </button>
-          <button className="post-action-btn"><Send size={20} /></button>
-        </div>
-        <motion.button
-          className="post-action-btn"
-          onClick={handleSave}
-          whileTap={{ scale: 0.8 }}
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+          onClick={() => navigate(`/profile/${post.author?._id}`)}
         >
-          <Bookmark size={22} fill={saved ? 'var(--accent-light)' : 'none'} stroke={saved ? 'var(--accent-light)' : 'currentColor'} />
+          {/* Story ring if author has story */}
+          <div style={{ padding: 2, borderRadius: '50%', background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' }}>
+            <div style={{ padding: 2, borderRadius: '50%', background: '#000' }}>
+              <Avatar src={post.author?.avatarUrl} name={post.author?.name} size={32} />
+            </div>
+          </div>
+          <div>
+            <div style={{ color: 'white', fontWeight: 700, fontSize: 13, lineHeight: 1.3 }}>
+              {post.author?.name}
+            </div>
+            {post.location && (
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{post.location}</div>
+            )}
+          </div>
+        </div>
+
+        {/* More / Delete */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setShowMenu(m => !m)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'white' }}
+          >
+            <MoreHorizontal size={20} />
+          </button>
+          <AnimatePresence>
+            {showMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                transition={{ duration: 0.15 }}
+                style={{
+                  position: 'absolute', top: 32, right: 0,
+                  background: '#262626', borderRadius: 12,
+                  overflow: 'hidden', zIndex: 50,
+                  minWidth: 160,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.6)'
+                }}
+                onClick={() => setShowMenu(false)}
+              >
+                {isOwner && (
+                  <button onClick={handleDelete} style={menuItemStyle('#ef4444')}>
+                    <Trash2 size={15} /> Delete
+                  </button>
+                )}
+                <button onClick={() => { navigator.clipboard.writeText(window.location.href); setShowMenu(false); }} style={menuItemStyle('white')}>
+                  Copy link
+                </button>
+                <button onClick={() => setShowMenu(false)} style={menuItemStyle('rgba(255,255,255,0.5)')}>
+                  Cancel
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* ── Image ── */}
+      {post.type === 'image' && post.imageUrl && (
+        <div style={{ position: 'relative', width: '100%', background: '#111' }} onDoubleClick={handleDoubleTap}>
+          <img
+            src={api.getFileUrl(post.imageUrl)}
+            alt=""
+            style={{ width: '100%', maxHeight: 600, objectFit: 'cover', display: 'block' }}
+          />
+          <AnimatePresence>
+            {heartAnim && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1.1, opacity: 1 }}
+                exit={{ scale: 1.4, opacity: 0 }}
+                transition={{ duration: 0.35 }}
+                style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                  filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.6))'
+                }}
+              >
+                <Heart size={90} fill="white" color="white" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Code snippet */}
+      {post.type === 'code' && post.codeSnippet && (
+        <pre style={{
+          background: '#0d1117', border: '0.5px solid rgba(255,255,255,0.08)',
+          borderRadius: 8, padding: '12px 14px',
+          margin: '0 12px 8px',
+          fontSize: 13, fontFamily: "'Consolas', monospace",
+          color: '#79c0ff', overflowX: 'auto', whiteSpace: 'pre-wrap'
+        }}>
+          {post.codeSnippet}
+        </pre>
+      )}
+
+      {/* ── Action row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px 4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* Like */}
+          <motion.button onClick={handleLike} whileTap={{ scale: 0.75 }} style={actionBtnStyle}>
+            <Heart
+              size={24}
+              fill={liked ? '#ef4444' : 'none'}
+              color={liked ? '#ef4444' : 'white'}
+              strokeWidth={1.8}
+            />
+          </motion.button>
+
+          {/* Comment */}
+          <button onClick={() => setShowComments(s => !s)} style={actionBtnStyle}>
+            <MessageCircle size={24} color="white" strokeWidth={1.8} />
+          </button>
+
+          {/* Share */}
+          <button onClick={handleShare} style={actionBtnStyle}>
+            <Send size={22} color="white" strokeWidth={1.8} />
+          </button>
+        </div>
+
+        {/* Save */}
+        <motion.button onClick={handleSave} whileTap={{ scale: 0.75 }} style={actionBtnStyle}>
+          <Bookmark
+            size={24}
+            fill={saved ? 'white' : 'none'}
+            color="white"
+            strokeWidth={1.8}
+          />
         </motion.button>
       </div>
 
-      {/* Likes */}
+      {/* ── Likes count ── */}
       {likesCount > 0 && (
-        <div className="post-likes">{likesCount} {likesCount === 1 ? 'like' : 'likes'}</div>
-      )}
-
-      {/* Comments */}
-      {showComments && (
-        <div className="post-comments">
-          {comments.map((c, i) => (
-            <div key={i} className="post-comment">
-              <span className="comment-author">{c.author?.name || 'User'}</span>
-              <span className="comment-text">{c.content}</span>
-            </div>
-          ))}
-          <div className="comment-input-row">
-            <input
-              placeholder="Add a comment..."
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleComment()}
-            />
-            <button className="comment-post-btn" onClick={handleComment} disabled={!comment.trim()}>Post</button>
-          </div>
+        <div style={{ padding: '2px 14px 4px', color: 'white', fontSize: 13, fontWeight: 700 }}>
+          {likesCount.toLocaleString()} {likesCount === 1 ? 'like' : 'likes'}
         </div>
       )}
 
-      <style>{`
-        .post-card {
-          margin-bottom: 12px;
-        }
-        .post-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px 14px;
-        }
-        .post-author {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .post-author-name {
-          font-weight: 600;
-          font-size: 14px;
-        }
-        .post-time {
-          font-size: 11px;
-          color: var(--text-muted);
-        }
-        .post-content {
-          position: relative;
-        }
-        .post-text {
-          padding: 0 14px 10px;
-          font-size: 14px;
-          line-height: 1.5;
-        }
-        .post-image-wrap {
-          position: relative;
-          overflow: hidden;
-        }
-        .post-image {
-          width: 100%;
-          max-height: 500px;
-          object-fit: cover;
-        }
-        .double-tap-heart {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          color: white;
-          filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
-          pointer-events: none;
-        }
-        .post-code {
-          background: var(--bg-primary);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          padding: 14px;
-          margin: 0 14px 10px;
-          font-size: 13px;
-          font-family: 'Consolas', monospace;
-          color: var(--accent-light);
-          overflow-x: auto;
-          white-space: pre-wrap;
-        }
-        .post-actions {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 8px 10px;
-        }
-        .post-actions-left {
-          display: flex;
-          gap: 2px;
-        }
-        .post-action-btn {
-          padding: 6px 8px;
-          border-radius: 8px;
-          color: var(--text-primary);
-          transition: background 0.15s;
-        }
-        .post-action-btn:hover {
-          background: var(--bg-hover);
-        }
-        .post-likes {
-          padding: 0 14px 4px;
-          font-size: 13px;
-          font-weight: 600;
-        }
-        .post-comments {
-          padding: 8px 14px 14px;
-          border-top: 1px solid var(--border-color);
-        }
-        .post-comment {
-          font-size: 13px;
-          margin-bottom: 4px;
-        }
-        .comment-author {
-          font-weight: 600;
-          margin-right: 6px;
-        }
-        .comment-text {
-          color: var(--text-secondary);
-        }
-        .comment-input-row {
-          display: flex;
-          gap: 8px;
-          margin-top: 10px;
-        }
-        .comment-input-row input {
-          flex: 1;
-          padding: 8px 12px;
-          font-size: 13px;
-        }
-        .comment-post-btn {
-          color: var(--accent-light);
-          font-weight: 600;
-          font-size: 13px;
-          padding: 0 8px;
-        }
-        .comment-post-btn:disabled {
-          opacity: 0.4;
-        }
-        .btn-delete-post {
-          color: rgba(239, 68, 68, 0.6);
-          transition: color 0.2s;
-        }
-        .btn-delete-post:hover {
-          color: #ef4444;
-          background: rgba(239, 68, 68, 0.1);
-        }
-      `}</style>
+      {/* ── Caption ── */}
+      {post.content && (
+        <div style={{ padding: '2px 14px 6px', fontSize: 14, lineHeight: 1.5, color: 'white' }}>
+          <span style={{ fontWeight: 700, marginRight: 6 }}>{post.author?.name}</span>
+          {post.content}
+        </div>
+      )}
+
+      {/* ── Comments preview ── */}
+      {comments.length > 0 && !showComments && (
+        <button
+          onClick={() => setShowComments(true)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 14px 4px', color: 'rgba(255,255,255,0.45)', fontSize: 13 }}
+        >
+          View all {comments.length} comment{comments.length !== 1 ? 's' : ''}
+        </button>
+      )}
+
+      {/* ── Full comments ── */}
+      <AnimatePresence>
+        {showComments && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{ padding: '4px 14px 0' }}>
+              {comments.map((c, i) => (
+                <div key={c._id || i} style={{ fontSize: 13, marginBottom: 6, lineHeight: 1.4, color: 'white' }}>
+                  <span style={{ fontWeight: 700, marginRight: 6 }}>{c.author?.name || 'User'}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.85)' }}>{c.content}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Timestamp ── */}
+      <div style={{ padding: '4px 14px 10px', color: 'rgba(255,255,255,0.3)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {timeAgo(post.createdAt)}
+      </div>
+
+      {/* ── Comment input ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '8px 12px 12px',
+        borderTop: '0.5px solid rgba(255,255,255,0.06)'
+      }}>
+        <Avatar src={user?.avatarUrl} name={user?.name} size={28} />
+        <input
+          placeholder="Add a comment..."
+          value={comment}
+          onChange={e => setComment(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleComment()}
+          style={{
+            flex: 1, background: 'transparent', border: 'none',
+            outline: 'none', color: 'white', fontSize: 13,
+            caretColor: 'white'
+          }}
+        />
+        {comment.trim() && (
+          <button
+            onClick={handleComment}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0095f6', fontWeight: 700, fontSize: 13 }}
+          >
+            Post
+          </button>
+        )}
+      </div>
     </div>
   );
 }
+
+const actionBtnStyle = {
+  background: 'none', border: 'none',
+  cursor: 'pointer', padding: 2,
+  display: 'flex', alignItems: 'center',
+  WebkitTapHighlightColor: 'transparent'
+};
+
+const menuItemStyle = (color) => ({
+  display: 'flex', alignItems: 'center', gap: 10,
+  width: '100%', padding: '13px 16px',
+  background: 'none', border: 'none',
+  cursor: 'pointer', color,
+  fontSize: 14, fontWeight: color === 'white' ? 400 : 600,
+  borderBottom: '0.5px solid rgba(255,255,255,0.06)'
+});

@@ -27,93 +27,98 @@ export default function StoryBar({ stories = [], onRefresh }) {
 
   return (
     <>
-      <div className="story-bar">
+      <div style={{
+        display: 'flex',
+        gap: 12,
+        padding: '12px 16px',
+        overflowX: 'auto',
+        borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch'
+      }}>
         {/* Add Story */}
-        <button className="story-item" onClick={() => navigate('/create')}>
-          <div className="story-ring add-ring">
+        <button
+          onClick={() => navigate('/create')}
+          style={itemBtnStyle}
+        >
+          {/* Dashed ring */}
+          <div style={{
+            padding: 3,
+            borderRadius: '50%',
+            border: '1.5px dashed rgba(255,255,255,0.35)',
+            position: 'relative'
+          }}>
             <Avatar src={user?.avatarUrl} name={user?.name} size={56} />
-            <div className="story-add-icon"><Plus size={14} /></div>
+            {/* Plus badge */}
+            <div style={{
+              position: 'absolute', bottom: 1, right: 1,
+              width: 20, height: 20, borderRadius: '50%',
+              background: '#0095f6',
+              border: '2px solid #000',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Plus size={12} color="white" strokeWidth={3} />
+            </div>
           </div>
-          <span className="story-name">Your story</span>
+          <span style={nameLabelStyle}>Your story</span>
         </button>
 
-        {/* Stories */}
+        {/* Story groups */}
         {storyGroups.map(g => (
-          <button key={g.author._id} className="story-item" onClick={() => viewStory(g.stories[0])}>
-            <div className="story-ring has-story">
-              <Avatar src={g.author.avatarUrl} name={g.author.name} size={56} />
+          <button
+            key={g.author._id}
+            onClick={() => viewStory(g.stories[0])}
+            style={itemBtnStyle}
+          >
+            {/* Instagram-style gradient ring */}
+            <div style={{
+              padding: 2,
+              borderRadius: '50%',
+              background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)'
+            }}>
+              <div style={{ padding: 2, borderRadius: '50%', background: '#000' }}>
+                <Avatar src={g.author.avatarUrl} name={g.author.name} size={56} />
+              </div>
             </div>
-            <span className="story-name">{g.author.name?.split(' ')[0]}</span>
+            <span style={nameLabelStyle}>{g.author.name?.split(' ')[0]}</span>
           </button>
         ))}
       </div>
 
-      {/* View Story */}
+      {/* Hide webkit scrollbar */}
+      <style>{`.story-bar-scroll::-webkit-scrollbar{display:none}`}</style>
+
       {viewingStory && (
-        <StoryViewer 
-          story={viewingStory} 
-          onClose={() => setViewingStory(null)} 
-          currentUserId={user?._id || user?.id} 
+        <StoryViewer
+          story={viewingStory}
+          onClose={() => { setViewingStory(null); if (onRefresh) onRefresh(); }}
+          currentUserId={user?._id || user?.id}
         />
       )}
-
-      <style>{`
-        .story-bar {
-          display: flex;
-          gap: 12px;
-          padding: 14px 16px;
-          overflow-x: auto;
-          border-bottom: 1px solid var(--border-color);
-          scrollbar-width: none;
-        }
-        .story-bar::-webkit-scrollbar { display: none; }
-        .story-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          flex-shrink: 0;
-          background: none;
-        }
-        .story-ring {
-          padding: 3px;
-          border-radius: 50%;
-          position: relative;
-        }
-        .story-ring.has-story {
-          background: var(--gradient-warm);
-        }
-        .story-ring.add-ring {
-          border: 2px dashed var(--border-light);
-          border-radius: 50%;
-        }
-        .story-add-icon {
-          position: absolute;
-          bottom: 0;
-          right: 0;
-          width: 20px;
-          height: 20px;
-          background: var(--accent);
-          border-radius: 50%;
-          border: 2px solid var(--bg-primary);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-        }
-        .story-name {
-          font-size: 11px;
-          color: var(--text-secondary);
-          max-width: 64px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        @keyframes storyTimer {
-          from { width: 0; }
-          to { width: 100%; }
-        }
-      `}</style>
     </>
   );
 }
+
+const itemBtnStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 6,
+  flexShrink: 0,
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: 0,
+  WebkitTapHighlightColor: 'transparent'
+};
+
+const nameLabelStyle = {
+  fontSize: 11,
+  color: 'rgba(255,255,255,0.75)',
+  maxWidth: 64,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  lineHeight: 1
+};
