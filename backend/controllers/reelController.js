@@ -37,7 +37,9 @@ exports.createReel = async (req, res) => {
             title,
             videoUrl,
             thumbnailUrl,
-            hashtags: hashtags ? hashtags.split(',').map(tag => tag.trim()) : []
+            hashtags: Array.isArray(hashtags)
+                ? hashtags
+                : (hashtags ? hashtags.split(',').map(tag => tag.trim()).filter(Boolean) : [])
         });
 
         const populatedReel = await Reel.findById(reel._id).populate('author', 'name avatarUrl');

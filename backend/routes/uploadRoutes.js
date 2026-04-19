@@ -15,7 +15,7 @@ router.post('/image/:type', protect, (req, res, next) => {
     res.json({ url: fileUrl, filename: req.file.filename });
 });
 
-// Generic video upload endpoint (also used by chat)
+// Generic video upload endpoint (also used by chat) - with type
 router.post('/video/:type', protect, (req, res, next) => {
     req.uploadType = req.params.type || 'reels';
     next();
@@ -24,6 +24,18 @@ router.post('/video/:type', protect, (req, res, next) => {
         return res.status(400).json({ message: 'No file uploaded' });
     }
     const fileUrl = `/uploads/${req.params.type}/${req.file.filename}`;
+    res.json({ url: fileUrl, filename: req.file.filename });
+});
+
+// Generic video upload - default to reels folder
+router.post('/video', protect, (req, res, next) => {
+    req.uploadType = 'reels';
+    next();
+}, upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+    }
+    const fileUrl = `/uploads/reels/${req.file.filename}`;
     res.json({ url: fileUrl, filename: req.file.filename });
 });
 

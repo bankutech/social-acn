@@ -7,7 +7,7 @@ const StorySchema = new mongoose.Schema({
     imageUrl: { type: String },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     viewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    expiresAt: { type: Date, default: Date.now, expires: 86400 } // Auto-delete after 24 hours
+    expiresAt: { type: Date, default: () => new Date(Date.now() + 86400000), expires: 86400 } // Auto-delete after 24 hours
 }, { timestamps: true });
 
 module.exports = mongoose.model('Story', StorySchema);

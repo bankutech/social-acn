@@ -28,6 +28,7 @@ export default function CreatePostPage() {
   // General state
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
   const handleFileSelect = (e) => {
@@ -73,6 +74,7 @@ export default function CreatePostPage() {
 
   const handleSubmit = async () => {
     setLoading(true);
+    setError('');
     try {
       if (createMode === 'post') {
         if (!content.trim() && !imageFile && !codeSnippet.trim()) return setLoading(false);
@@ -112,7 +114,7 @@ export default function CreatePostPage() {
         if (!reelTitle.trim() || !reelVideoFile) return setLoading(false);
         const fd = new FormData();
         fd.append('file', reelVideoFile);
-        const uploadRes = await api.upload('/api/upload/video', fd);
+        const uploadRes = await api.upload('/api/upload/video/reels', fd);
         
         await api.post('/api/reels', {
           title: reelTitle,
@@ -122,7 +124,8 @@ export default function CreatePostPage() {
         navigate('/reels');
       }
     } catch (err) {
-      console.error(err);
+      console.error('Submit error:', err);
+      setError(err.message || 'Something went wrong. Please try again.');
     }
     setLoading(false);
   };
@@ -146,6 +149,12 @@ export default function CreatePostPage() {
           {loading ? '...' : <><Send size={16} /> Share</>}
         </button>
       </div>
+
+      {error && (
+        <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, color: '#ef4444', fontSize: 13 }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {/* Main Mode Tabs */}
       <div className="tabs" style={{ marginBottom: 12 }}>
