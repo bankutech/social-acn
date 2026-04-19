@@ -59,9 +59,21 @@ export default function ChatPage() {
     setTimeout(scrollToBottom, 100);
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  const scrollToBottom = (instant = false) => {
+    if (!messagesEndRef.current) return;
+    messagesEndRef.current.scrollIntoView({ 
+      behavior: instant ? 'auto' : 'smooth', 
+      block: 'end' 
+    });
   };
+
+  // Auto-scroll when messages change or typing status updates
+  useEffect(() => {
+    if (messages.length > 0) {
+      const timeout = setTimeout(() => scrollToBottom(), 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [messages.length, typing]);
 
   const handleSend = async () => {
     if (!input.trim() && !mediaFile) return;

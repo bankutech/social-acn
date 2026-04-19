@@ -95,9 +95,22 @@ export default function PartnerChatPage() {
     setTimeout(scrollToBottom, 200);
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  const scrollToBottom = (instant = false) => {
+    if (!messagesEndRef.current) return;
+    messagesEndRef.current.scrollIntoView({ 
+      behavior: instant ? 'auto' : 'smooth', 
+      block: 'end' 
+    });
   };
+
+  // Auto-scroll when messages change or typing status updates
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Small timeout to allow DOM/animations to start
+      const timeout = setTimeout(() => scrollToBottom(), 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [messages.length, typing]);
 
   const handleSend = async () => {
     if ((!input.trim() && !imageFile) || !chat?._id || sending) return;
