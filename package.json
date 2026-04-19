@@ -1,5 +1,25 @@
 {
-  "dependencies": {
-    "mongodb": "^7.1.1"
+  "name": "social-acn",
+  "version": "1.0.0",
+  "description": "ACN+ Social Learning Platform",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "cd backend && npm start",
+    "client": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "cd frontend && npm run build",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
+  "keywords": [
+    "social",
+    "learning",
+    "acn",
+    "education"
+  ],
+  "author": "ACN+ Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
