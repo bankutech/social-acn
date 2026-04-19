@@ -3,14 +3,30 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, LogIn, Sparkles, Zap, Shield } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    try {
+      await googleLogin(credentialResponse.credential);
+    } catch (err) {
+      setError(err.message || 'Google Auth failed');
+    }
+    setLoading(false);
+  };
+
+  const handleGoogleError = () => {
+    setError('Google Sign In was unsuccessful. Try again.');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -152,6 +168,18 @@ export default function LoginPage() {
 
           <div className="divider-row">
             <span>OR</span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              shape="pill"
+              theme="filled_black"
+              size="large"
+              text="continue_with"
+              width="100%"
+            />
           </div>
 
           <button className="btn-demo-mode" onClick={handleDemo} disabled={loading}>

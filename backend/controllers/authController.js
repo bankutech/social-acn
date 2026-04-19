@@ -1,6 +1,10 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const { OAuth2Client } = require('google-auth-library');
+const crypto = require('crypto');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret_key_123', {
@@ -87,6 +91,74 @@ exports.loginUser = async (req, res) => {
         }
     } catch (error) {
          res.status(500).json({ message: error.message });
+    }
+};
+
+exports.googleLogin = async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        
+        const payload = ticket.getPayload();
+        const { email, name, picture, sub: googleId } = payload;
+        
+        let user;
+        try {
+            user = await User.findOne({ email }).select('+password');
+        } catch (dbErr) {
+            console.warn('DB Query failed');
+            return res.status(500).json({ message: 'Database connection error' });
+        }
+        
+        if (!user) {
+            const dummyPassword = crypto.randomBytes(16).toString('hex');
+            
+            user = await User.create({
+                name,
+                email,
+                password: dummyPassword,
+                googleId,
+                avatarUrl: picture || `https://i.pravatar.cc/150?u=${email}`
+            });
+        } else {
+            if (!user.googleId) {
+                user.googleId = googleId;
+            }
+            user.lastLogin = Date.now();
+            
+            const now = new Date();
+            const lastLog = new Date(user.lastLogin);
+            const diffTime = Math.abs(now - lastLog);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+                user.studyStreak += 1;
+            } else if (diffDays > 1) {
+                user.studyStreak = 0;
+            }
+            
+            await user.save();
+        }
+        
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            avatarUrl: user.avatarUrl,
+            bio: user.bio,
+            skills: user.skills,
+            studyStreak: user.studyStreak,
+            followers: user.followers,
+            following: user.following,
+            token: generateToken(user._id),
+        });
+    } catch (error) {
+        console.error('Google login error:', error);
+        res.status(401).json({ message: 'Invalid Google token' });
     }
 };
 

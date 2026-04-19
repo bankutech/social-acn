@@ -7,6 +7,7 @@ const AuthContext = createContext({
   loading: true,
   login: async () => {},
   signup: async () => {},
+  googleLogin: async () => {},
   logout: () => {},
   updateUser: () => {},
 });
@@ -43,6 +44,14 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const googleLogin = async (idToken) => {
+    const data = await api.post('/api/auth/google', { idToken });
+    localStorage.setItem('acn_user', JSON.stringify(data));
+    setUser(data);
+    connectSocket(data._id);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('acn_user');
     disconnectSocket();
@@ -56,7 +65,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

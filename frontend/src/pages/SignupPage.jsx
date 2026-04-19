@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, UserPlus, X, Briefcase, BookOpen, Sparkles } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function SignupPage() {
-  const { signup } = useAuth();
+  const { signup, googleLogin } = useAuth();
   const [form, setForm] = useState({ name: '', email: '', password: '', bio: '', skills: [] });
   const [showPass, setShowPass] = useState(false);
   const [skillInput, setSkillInput] = useState('');
@@ -13,6 +14,21 @@ export default function SignupPage() {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    try {
+      await googleLogin(credentialResponse.credential);
+    } catch (err) {
+      setError(err.message || 'Google Auth failed');
+    }
+    setLoading(false);
+  };
+
+  const handleGoogleError = () => {
+    setError('Google Sign In was unsuccessful. Try again.');
+  };
 
   // Form handling functions
   const addSkill = () => {
@@ -235,6 +251,24 @@ export default function SignupPage() {
               {loading ? <span className="loader-spinner" style={{ width: 22, height: 22, borderWidth: 2 }} /> : <><UserPlus size={20} /> Register Now</>}
             </button>
           </form>
+
+          <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>
+             <div style={{ flex: 1, borderBottom: '1px solid rgba(255,255,255,0.08)' }}></div>
+             <span style={{ padding: '0 16px', opacity: 0.5 }}>OR</span>
+             <div style={{ flex: 1, borderBottom: '1px solid rgba(255,255,255,0.08)' }}></div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              shape="pill"
+              theme="filled_black"
+              size="large"
+              text="signup_with"
+              width="100%"
+            />
+          </div>
 
           <p className="auth-footer-link">
             Already a member? <Link to="/login">Sign In Instead</Link>
