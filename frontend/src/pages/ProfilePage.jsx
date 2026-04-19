@@ -363,13 +363,22 @@ export default function ProfilePage() {
         }
         .btn-message-circle, .btn-partner-heart {
           flex: 1;
+          height: 48px;
           background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: background 0.2s;
+        }
+        .btn-message-circle:hover { background: rgba(255,255,255,0.1); }
+        .btn-follow-cta, .btn-unfollow {
+          height: 48px;
+          padding: 0 20px;
         }
         .btn-partner-heart { color: #ec4899; }
+        .btn-partner-heart:hover { background: rgba(236,72,153,0.1); }
 
         .section-tab-header {
           display: flex;

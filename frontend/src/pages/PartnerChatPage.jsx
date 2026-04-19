@@ -51,8 +51,12 @@ export default function PartnerChatPage() {
     socket.emit('join_partner_chat', chat._id);
 
     socket.on('partner_new_message', (msg) => {
-      setMessages(prev => [...prev, msg]);
-      scrollToBottom();
+      // Only add messages from the OTHER person to prevent duplicates
+      const senderId = msg.sender_id?._id || msg.sender_id;
+      if (String(senderId) !== String(user?._id)) {
+        setMessages(prev => [...prev, msg]);
+        scrollToBottom();
+      }
     });
 
     socket.on('partner_user_typing', ({ userId, isTyping }) => {

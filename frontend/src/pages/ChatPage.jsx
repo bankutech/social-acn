@@ -28,7 +28,8 @@ export default function ChatPage() {
     const socket = getSocket();
 
     socket.on('new_message', (data) => {
-      if (data.message) {
+      // Only add messages received FROM the other person, not our own (already added after API call)
+      if (data.message && String(data.message.sender?._id || data.message.sender) !== String(user?._id)) {
         setMessages(prev => [...prev, data.message]);
         scrollToBottom();
       }
@@ -232,6 +233,7 @@ export default function ChatPage() {
           display: flex;
           flex-direction: column;
           background: var(--bg-primary);
+          padding-bottom: 0;
         }
         .chat-header {
           display: flex;
@@ -251,10 +253,11 @@ export default function ChatPage() {
         .chat-messages {
           flex: 1;
           overflow-y: auto;
-          padding: 16px 12px;
+          padding: 16px 12px 16px;
           display: flex;
           flex-direction: column;
           gap: 4px;
+          scroll-behavior: smooth;
         }
         .chat-bubble-row {
           display: flex;
