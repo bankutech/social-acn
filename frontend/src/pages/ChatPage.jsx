@@ -29,7 +29,10 @@ export default function ChatPage() {
 
     socket.on('new_message', (data) => {
       if (data.message && String(data.message.sender?._id || data.message.sender) !== String(user?._id)) {
-        setMessages(prev => [...prev, data.message]);
+        setMessages(prev => {
+          if (data.message._id && prev.some(m => m._id === data.message._id)) return prev;
+          return [...prev, data.message];
+        });
         scrollToBottom();
       }
     });
@@ -42,7 +45,7 @@ export default function ChatPage() {
       socket.off('new_message');
       socket.off('user_typing');
     };
-  }, [userId]);
+  }, [userId, user?._id]);
 
   const loadChat = async () => {
     try {

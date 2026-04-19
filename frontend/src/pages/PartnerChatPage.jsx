@@ -55,7 +55,10 @@ export default function PartnerChatPage() {
     socket.on('partner_new_message', (msg) => {
       const sid = msg.sender_id?._id || msg.sender_id;
       if (String(sid) !== String(user?._id)) {
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => {
+          if (msg._id && prev.some(m => m._id === msg._id)) return prev;
+          return [...prev, msg];
+        });
         scrollToBottom();
       }
     });
@@ -72,7 +75,7 @@ export default function PartnerChatPage() {
       socket.off('partner_user_typing');
       socket.off('partner_theme_change');
     };
-  }, [chat?._id]);
+  }, [chat?._id, user?._id]);
 
   const loadChat = async () => {
     try {
