@@ -58,7 +58,8 @@ export default function BottomNav() {
                 gap: 4,
                 textDecoration: 'none',
                 padding: '4px 0',
-                WebkitTapHighlightColor: 'transparent'
+                WebkitTapHighlightColor: 'transparent',
+                position: 'relative'
               }}
             >
               <motion.div
