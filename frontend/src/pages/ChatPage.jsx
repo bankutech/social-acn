@@ -62,7 +62,7 @@ export default function ChatPage() {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   };
 
   const handleSend = async () => {
@@ -229,11 +229,12 @@ export default function ChatPage() {
 
       <style>{`
         .chat-page {
-          height: 100vh;
+          height: 100dvh;
+          max-height: 100dvh;
           display: flex;
           flex-direction: column;
           background: var(--bg-primary);
-          padding-bottom: 0;
+          overflow: hidden;
         }
         .chat-header {
           display: flex;
@@ -253,11 +254,13 @@ export default function ChatPage() {
         .chat-messages {
           flex: 1;
           overflow-y: auto;
-          padding: 16px 12px 16px;
+          overflow-x: hidden;
+          padding: 16px 12px;
           display: flex;
           flex-direction: column;
           gap: 4px;
           scroll-behavior: smooth;
+          overscroll-behavior: contain;
         }
         .chat-bubble-row {
           display: flex;

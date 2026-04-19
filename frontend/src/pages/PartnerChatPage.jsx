@@ -94,7 +94,7 @@ export default function PartnerChatPage() {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   };
 
   const handleSend = async () => {
@@ -375,10 +375,12 @@ export default function PartnerChatPage() {
 
       <style>{`
         .partner-chat {
-          height: 100vh;
+          height: 100dvh;
+          max-height: 100dvh;
           display: flex;
           flex-direction: column;
           position: relative;
+          overflow: hidden;
         }
         .pc-header {
           display: flex;
@@ -409,10 +411,13 @@ export default function PartnerChatPage() {
         .pc-messages {
           flex: 1;
           overflow-y: auto;
+          overflow-x: hidden;
           padding: 16px 12px;
           display: flex;
           flex-direction: column;
           gap: 4px;
+          scroll-behavior: smooth;
+          overscroll-behavior: contain;
         }
         .pc-empty {
           flex: 1;

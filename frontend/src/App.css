@@ -3,6 +3,11 @@
   background: var(--bg-primary);
 }
 
+/* Prevent full-page scroll on chat screens */
+body {
+  overflow-x: hidden;
+}
+
 .app-loader {
   display: flex;
   align-items: center;
