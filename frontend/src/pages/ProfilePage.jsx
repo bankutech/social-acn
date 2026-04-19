@@ -33,10 +33,10 @@ export default function ProfilePage() {
       const currentUserId = user?._id || user?.id;
       setIsFollowing(profileData.followers?.some(f => (f._id || f) === currentUserId));
 
-      // Load user's posts
+      // Load user's posts using dedicated endpoint
       try {
-        const feedPosts = await api.get('/api/posts/feed');
-        const userPosts = feedPosts.filter(p => (p.author?._id || p.author) === (userId || currentUserId));
+        const targetId = userId || currentUserId;
+        const userPosts = await api.get(`/api/posts/user/${targetId}`);
         setPosts(userPosts);
       } catch {}
     } catch (err) {

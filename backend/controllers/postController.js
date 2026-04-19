@@ -93,6 +93,20 @@ exports.getFeed = async (req, res) => {
     }
 };
 
+exports.getUserPosts = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const posts = await Post.find({ author: userId })
+            .populate('author', 'name avatarUrl')
+            .populate('likes', 'name avatarUrl')
+            .populate('comments.author', 'name avatarUrl')
+            .sort({ createdAt: -1 });
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 exports.likePost = async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);

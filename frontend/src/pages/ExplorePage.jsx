@@ -5,7 +5,7 @@ import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserPlus, UserCheck, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { Search, UserPlus, UserCheck, Sparkles, TrendingUp, Users, X } from 'lucide-react';
 
 export default function ExplorePage() {
   const { user } = useAuth();
