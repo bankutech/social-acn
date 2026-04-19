@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const { createStory, getStories, viewStory } = require('../controllers/storyController');
+const { createStory, getStories, viewStory, getUserStories } = require('../controllers/storyController');
 
 router.post('/', protect, createStory);
 router.get('/', protect, getStories);
+router.get('/user/:userId', protect, getUserStories);
 router.post('/:id/view', protect, viewStory);
 
 module.exports = router;

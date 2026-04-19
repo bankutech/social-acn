@@ -54,7 +54,7 @@ exports.getStories = async (req, res) => {
 
         const stories = await Story.find({ 
             author: { $in: followingIds },
-            expiresAt: { $gt: new Date() }
+            createdAt: { $gt: new Date(Date.now() - 86400000) }
         })
         .populate('author', 'name avatarUrl')
         .sort({ createdAt: -1 });
@@ -79,6 +79,23 @@ exports.viewStory = async (req, res) => {
         }
 
         res.json({ viewed: true });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getUserStories = async (req, res) => {
+    try {
+        if (req.params.userId === 'mock_id_123') return res.json([]);
+
+        const stories = await Story.find({ 
+            author: req.params.userId,
+            createdAt: { $gt: new Date(Date.now() - 86400000) }
+        })
+        .populate('author', 'name avatarUrl')
+        .sort({ createdAt: -1 });
+
+        res.json(stories);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

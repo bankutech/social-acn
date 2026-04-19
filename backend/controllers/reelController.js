@@ -153,3 +153,20 @@ exports.deleteReel = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.getUserReels = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        if (userId === 'mock_id_123') return res.json([]);
+
+        const reels = await Reel.find({ author: userId })
+            .populate('author', 'name avatarUrl')
+            .populate('likes', 'name avatarUrl')
+            .populate('comments.author', 'name avatarUrl')
+            .sort({ createdAt: -1 });
+
+        res.json(reels);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

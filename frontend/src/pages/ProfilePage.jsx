@@ -6,7 +6,7 @@ import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3, Briefcase, GraduationCap } from 'lucide-react';
+import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3, Briefcase, GraduationCap, Film, Plus } from 'lucide-react';
 import { BRAND } from '../config/brand';
 
 export default function ProfilePage() {
@@ -15,6 +15,10 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [reels, setReels] = useState([]);
+  const [stories, setStories] = useState([]);
+  const [viewingStory, setViewingStory] = useState(null);
+  const [activeTab, setActiveTab] = useState('posts');
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -34,11 +38,17 @@ export default function ProfilePage() {
       const currentUserId = user?._id || user?.id;
       setIsFollowing(profileData.followers?.some(f => (f._id || f) === currentUserId));
 
-      // Load user's posts using dedicated endpoint
+      // Load user's posts, reels, stories using dedicated endpoints
       try {
         const targetId = userId || currentUserId;
-        const userPosts = await api.get(`/api/posts/user/${targetId}`);
+        const [userPosts, userReels, userStories] = await Promise.all([
+           api.get(`/api/posts/user/${targetId}`),
+           api.get(`/api/reels/user/${targetId}`),
+           api.get(`/api/stories/user/${targetId}`)
+        ]);
         setPosts(userPosts);
+        setReels(userReels);
+        setStories(userStories);
       } catch {}
     } catch (err) {
       console.error(err);
@@ -52,6 +62,17 @@ export default function ProfilePage() {
       setIsFollowing(res.following);
       loadProfile();
     } catch {}
+  };
+
+  const hasActiveStory = stories.length > 0;
+  const handleAvatarClick = () => {
+    if (hasActiveStory) {
+      setViewingStory(stories[0]);
+      // fire view count API
+      api.post(`/api/stories/${stories[0]._id}/view`).catch(()=>{});
+    } else if (isOwnProfile) {
+       navigate('/create');
+    }
   };
 
   if (loading) {
@@ -92,8 +113,17 @@ export default function ProfilePage() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="portrait-wrapper"
+              onClick={handleAvatarClick}
+              style={{ cursor: 'pointer', position: 'relative' }}
             >
-              <Avatar src={profile?.avatarUrl} name={profile?.name} size={110} />
+              <div className={`story-ring-profile ${hasActiveStory ? 'has-story' : ''}`}>
+                <Avatar src={profile?.avatarUrl} name={profile?.name} size={110} />
+              </div>
+              {isOwnProfile && (
+                <div className="add-story-btn">
+                  <Plus size={16} color="white" />
+                </div>
+              )}
               {profile?.studyStreak > 0 && (
                 <div className="streak-badge">
                   <Flame size={14} fill="#f97316" />
@@ -160,14 +190,19 @@ export default function ProfilePage() {
         {/* Content Section */}
         <div className="profile-content-grid">
           <div className="section-tab-header">
-            <div className="active-tab">
+            <button className={`tab-btn ${activeTab === 'posts' ? 'active-tab' : ''}`} onClick={() => setActiveTab('posts')}>
               <Grid3X3 size={18} />
               <span>{BRAND.feedTitle}</span>
-            </div>
+            </button>
+            <button className={`tab-btn ${activeTab === 'reels' ? 'active-tab' : ''}`} onClick={() => setActiveTab('reels')}>
+              <Film size={18} />
+              <span>Reels</span>
+            </button>
           </div>
 
           <div className="posts-stack">
-            {posts.length === 0 ? (
+            {activeTab === 'posts' && (
+              posts.length === 0 ? (
               <div className="empty-portfolio">
                 <Briefcase size={40} />
                 <p>Knowledge base is currently empty.</p>
@@ -183,10 +218,68 @@ export default function ProfilePage() {
                   <PostCard post={post} onUpdate={loadProfile} />
                 </motion.div>
               ))
+              )
+            )}
+
+            {activeTab === 'reels' && (
+              reels.length === 0 ? (
+                <div className="empty-portfolio">
+                  <Film size={40} />
+                  <p>No reels captured yet.</p>
+                </div>
+              ) : (
+                <div className="reels-grid-profile">
+                  {reels.map((reel, i) => (
+                    <motion.div 
+                      key={reel._id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="profile-reel-thumbnail"
+                      onClick={() => navigate('/reels')}
+                    >
+                      <video src={api.getFileUrl(reel.videoUrl)} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                      <div className="reel-thumbnail-icon">
+                         <Film size={24} color="white" />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         </div>
       </main>
+
+      {/* View Story */}
+      {viewingStory && (
+        <div className="modal-overlay" onClick={() => setViewingStory(null)} style={{ background: 'rgba(0,0,0,0.95)', position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="story-viewer" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px', minHeight: '60vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            <div className="story-progress" style={{ height: '3px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', marginBottom: '12px', overflow: 'hidden' }}>
+              <div className="story-progress-fill" style={{ height: '100%', background: 'white', borderRadius: '2px', width: '100%' }} />
+            </div>
+            <div className="story-viewer-header" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', padding: '0 16px' }}>
+              <Avatar src={viewingStory.author?.avatarUrl} name={viewingStory.author?.name} size={36} />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{viewingStory.author?.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  {new Date(viewingStory.createdAt).toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+            <div className="story-viewer-content" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', textAlign: 'center', padding: '20px' }}>
+              {viewingStory.type === 'image' && viewingStory.imageUrl ? (
+                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <img src={api.getFileUrl(viewingStory.imageUrl)} alt="" style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: 12, marginBottom: 12 }} />
+                  {viewingStory.content && <p style={{ fontSize: 16 }}>{viewingStory.content}</p>}
+                </div>
+              ) : (
+                <p>{viewingStory.content}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .premium-profile-layout {
@@ -254,6 +347,35 @@ export default function ProfilePage() {
 
         .portrait-wrapper {
           position: relative;
+        }
+        .story-ring-profile {
+          padding: 4px;
+          border-radius: 50%;
+          transition: transform 0.2s;
+        }
+        .story-ring-profile:hover {
+          transform: scale(1.02);
+        }
+        .story-ring-profile.has-story {
+          background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        }
+        .add-story-btn {
+          position: absolute;
+          bottom: 3px;
+          right: 3px;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: #3b82f6;
+          border: 3px solid #1a1a1a;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .add-story-btn:hover {
+          background: #2563eb;
         }
         .streak-badge {
           position: absolute;
@@ -384,20 +506,61 @@ export default function ProfilePage() {
         .section-tab-header {
           display: flex;
           justify-content: center;
-          padding: 24px 0 12px;
+          gap: 40px;
+          padding: 24px 0 0;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           margin-bottom: 20px;
         }
-        .active-tab {
+        .tab-btn {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 12px;
-          font-weight: 800;
+          font-size: 13px;
+          font-weight: 700;
           letter-spacing: 1px;
+          color: rgba(255,255,255,0.5);
+          padding: 12px 16px;
+          background: none;
+          border: none;
+          border-bottom: 2px solid transparent;
+          cursor: pointer;
+          text-transform: uppercase;
+        }
+        .tab-btn.active-tab {
           color: white;
-          padding: 8px 16px;
           border-bottom: 2px solid white;
+        }
+        .reels-grid-profile {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+        }
+        .profile-reel-thumbnail {
+          aspect-ratio: 9/16;
+          border-radius: 12px;
+          overflow: hidden;
+          background: rgba(255,255,255,0.05);
+          position: relative;
+          cursor: pointer;
+        }
+        .profile-reel-thumbnail video {
+          transition: transform 0.3s;
+        }
+        .profile-reel-thumbnail:hover video {
+          transform: scale(1.05);
+        }
+        .reel-thumbnail-icon {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.2);
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+        .profile-reel-thumbnail:hover .reel-thumbnail-icon {
+          opacity: 1;
         }
 
         .posts-stack {

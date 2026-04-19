@@ -88,7 +88,7 @@ export default function ReelsPage() {
   );
 }
 
-function ReelCard({ reel, isActive, onDelete, currentUser }) {
+export function ReelCard({ reel, isActive, onDelete, currentUser }) {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [liked, setLiked] = useState(false);
