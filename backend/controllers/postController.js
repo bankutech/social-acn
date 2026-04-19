@@ -1,5 +1,7 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
+const fs = require('fs');
+const path = require('path');
 
 const getDemoStore = () => {
     if (!global.__acn_demo_store) {
@@ -164,6 +166,34 @@ exports.savePost = async (req, res) => {
 
         await post.save();
         res.json({ saved: !isSaved });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.deletePost = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        const userId = req.user.id || req.user._id;
+        if (post.author.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'Not authorized to delete this post' });
+        }
+
+        // Delete local image if exists
+        if (post.imageUrl && post.imageUrl.startsWith('/uploads/')) {
+            const filePath = path.join(__dirname, '..', post.imageUrl);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        await Post.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Post deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -53,6 +53,15 @@ const api = {
     return res.json();
   },
 
+  delete: async (path) => {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'DELETE',
+      headers: headers()
+    });
+    if (!res.ok) throw new Error((await res.json()).message || 'Request failed');
+    return res.json();
+  },
+
   getFileUrl: (path) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;

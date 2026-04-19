@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import { motion } from 'framer-motion';
-import { Heart, MessageCircle, Share2, Music, Play, Pause } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Music, Play, Pause, Trash2 } from 'lucide-react';
 
 export default function ReelsPage() {
   const { user } = useAuth();
@@ -53,7 +53,7 @@ export default function ReelsPage() {
 
       <div className="reels-scroll">
         {reels.map((reel, i) => (
-          <ReelCard key={reel._id} reel={reel} isActive={i === current} />
+          <ReelCard key={reel._id} reel={reel} isActive={i === current} onDelete={loadReels} currentUser={user} />
         ))}
       </div>
 
@@ -88,7 +88,7 @@ export default function ReelsPage() {
   );
 }
 
-function ReelCard({ reel, isActive }) {
+function ReelCard({ reel, isActive, onDelete, currentUser }) {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -110,6 +110,19 @@ function ReelCard({ reel, isActive }) {
       setLiked(res.liked);
       setLikesCount(res.likesCount);
     } catch {}
+  };
+
+  const isOwner = currentUser?._id === (reel.author?._id || reel.author);
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this reel? This cannot be undone.')) return;
+    try {
+      await api.delete(`/api/reels/${reel._id}`);
+      if (onDelete) onDelete();
+    } catch (err) {
+      alert(err.message || 'Failed to delete reel');
+    }
   };
 
   return (
@@ -164,6 +177,11 @@ function ReelCard({ reel, isActive }) {
         <button onClick={(e) => e.stopPropagation()}>
           <Share2 size={28} />
         </button>
+        {isOwner && (
+          <button onClick={handleDelete} style={{ color: '#ef4444' }}>
+            <Trash2 size={28} />
+          </button>
+        )}
       </div>
 
       <style>{`

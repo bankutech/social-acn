@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Avatar from './Avatar';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Send } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Send, Trash2 } from 'lucide-react';
 
 export default function PostCard({ post, onUpdate }) {
   const { user } = useAuth();
@@ -18,6 +18,8 @@ export default function PostCard({ post, onUpdate }) {
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState(post.comments || []);
   const [heartAnim, setHeartAnim] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+  const isOwner = user?._id === (post.author?._id || post.author);
 
   const handleLike = async () => {
     try {
@@ -47,6 +49,17 @@ export default function PostCard({ post, onUpdate }) {
     } catch {}
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+    try {
+      await api.delete(`/api/posts/${post._id}`);
+      setDeleted(true);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      alert(err.message || 'Failed to delete post');
+    }
+  };
+
   const timeAgo = (date) => {
     const s = Math.floor((Date.now() - new Date(date)) / 1000);
     if (s < 60) return 'now';
@@ -66,7 +79,13 @@ export default function PostCard({ post, onUpdate }) {
             <div className="post-time">{timeAgo(post.createdAt)}</div>
           </div>
         </div>
-        <button className="btn-icon"><MoreHorizontal size={18} /></button>
+        {isOwner ? (
+          <button className="btn-icon btn-delete-post" onClick={handleDelete} title="Delete post">
+            <Trash2 size={16} />
+          </button>
+        ) : (
+          <button className="btn-icon"><MoreHorizontal size={18} /></button>
+        )}
       </div>
 
       {/* Content */}
@@ -263,6 +282,14 @@ export default function PostCard({ post, onUpdate }) {
         }
         .comment-post-btn:disabled {
           opacity: 0.4;
+        }
+        .btn-delete-post {
+          color: rgba(239, 68, 68, 0.6);
+          transition: color 0.2s;
+        }
+        .btn-delete-post:hover {
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
         }
       `}</style>
     </div>

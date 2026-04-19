@@ -1,5 +1,7 @@
 const Reel = require('../models/Reel');
 const User = require('../models/User');
+const fs = require('fs');
+const path = require('path');
 
 exports.createReel = async (req, res) => {
     try {
@@ -119,6 +121,34 @@ exports.addComment = async (req, res) => {
             .select('comments');
 
         res.json(populatedComment.comments[populatedComment.comments.length - 1]);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.deleteReel = async (req, res) => {
+    try {
+        const reel = await Reel.findById(req.params.id);
+
+        if (!reel) {
+            return res.status(404).json({ message: 'Reel not found' });
+        }
+
+        const userId = req.user.id || req.user._id;
+        if (reel.author.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'Not authorized to delete this reel' });
+        }
+
+        // Delete local video file if exists
+        if (reel.videoUrl && reel.videoUrl.startsWith('/uploads/')) {
+            const filePath = path.join(__dirname, '..', reel.videoUrl);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        await Reel.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Reel deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
