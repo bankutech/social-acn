@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, UserPlus, X, Briefcase, BookOpen, Sparkles } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+import { BRAND } from '../config/brand';
 
 export default function SignupPage() {
   const { signup, googleLogin } = useAuth();
@@ -79,7 +80,7 @@ export default function SignupPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            A+
+            <img src={BRAND.logo} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: 'inherit' }} />
           </motion.div>
           
           <motion.h1 
@@ -135,7 +136,7 @@ export default function SignupPage() {
         >
           <div className="auth-header">
             <h2>Create Account</h2>
-            <p className="auth-subtitle">Join ACN+ to unlock your potential</p>
+            <p className="auth-subtitle">Join {BRAND.name} to unlock your potential</p>
           </div>
 
           <form onSubmit={handleSubmit} className="premium-form">

@@ -7,6 +7,7 @@ import SkeletonLoader from '../components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Search, Bell, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { BRAND } from '../config/brand';
 
 export default function FeedPage() {
   const { user } = useAuth();
@@ -43,7 +44,7 @@ export default function FeedPage() {
             whileHover={{ scale: 1.05 }}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            A+
+            <img src={BRAND.logo} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: 'inherit' }} />
           </motion.div>
           <h1 className="nav-title">ACN<span className="plus-accent">+</span></h1>
         </div>

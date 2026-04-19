@@ -7,6 +7,7 @@ import PostCard from '../components/PostCard';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3, Briefcase, GraduationCap } from 'lucide-react';
+import { BRAND } from '../config/brand';
 
 export default function ProfilePage() {
   const { userId } = useParams();
@@ -121,7 +122,7 @@ export default function ProfilePage() {
             <h2 className="display-name">{profile?.name}</h2>
             <div className="title-tag">
               <GraduationCap size={14} />
-              <span>ACN+ Student Member</span>
+              <span>{BRAND.memberTitle}</span>
             </div>
             {profile?.bio && <p className="bio-text">{profile.bio}</p>}
             
@@ -161,7 +162,7 @@ export default function ProfilePage() {
           <div className="section-tab-header">
             <div className="active-tab">
               <Grid3X3 size={18} />
-              <span>ACADEMIC FEED</span>
+              <span>{BRAND.feedTitle}</span>
             </div>
           </div>
 

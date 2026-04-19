@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, LogIn, Sparkles, Zap, Shield } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+import { BRAND } from '../config/brand';
 
 export default function LoginPage() {
   const { login, googleLogin } = useAuth();
@@ -61,7 +62,7 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            A+
+            <img src={BRAND.logo} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: 'inherit' }} />
           </motion.div>
           
           <motion.h1 
