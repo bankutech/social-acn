@@ -6,7 +6,7 @@ import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3, Briefcase, GraduationCap, Film, Plus } from 'lucide-react';
+import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3, Briefcase, GraduationCap, Film, Plus, UserPlus } from 'lucide-react';
 import { BRAND } from '../config/brand';
 
 export default function ProfilePage() {
@@ -108,7 +108,7 @@ export default function ProfilePage() {
       <main className="profile-scroll-area">
         {/* Profile Card */}
         <div className="profile-hero-card">
-          <div className="hero-top">
+          <div className="hero-top" style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -116,12 +116,15 @@ export default function ProfilePage() {
               onClick={handleAvatarClick}
               style={{ cursor: 'pointer', position: 'relative' }}
             >
+              <div className="vibe-bubble">
+                Today's<br/>vibe...
+              </div>
               <div className={`story-ring-profile ${hasActiveStory ? 'has-story' : ''}`}>
-                <Avatar src={profile?.avatarUrl} name={profile?.name} size={110} />
+                <Avatar src={profile?.avatarUrl} name={profile?.name} size={90} />
               </div>
               {isOwnProfile && (
                 <div className="add-story-btn">
-                  <Plus size={16} color="white" />
+                  <Plus size={16} color="black" strokeWidth={3} />
                 </div>
               )}
               {profile?.studyStreak > 0 && (
@@ -132,54 +135,77 @@ export default function ProfilePage() {
               )}
             </motion.div>
 
-            <div className="hero-stats">
-              <div className="stat-box">
-                <span className="stat-val">{posts.length}</span>
-                <span className="stat-lbl">Posts</span>
+            <div className="hero-right" style={{ flex: 1, paddingTop: '4px' }}>
+              <div style={{ fontSize: 18, fontWeight: 500, marginBottom: 16 }}>
+                {profile?.name?.split(' ')[0]}
               </div>
-              <div className="stat-box">
-                <span className="stat-val">{profile?.followers?.length || 0}</span>
-                <span className="stat-lbl">Followers</span>
-              </div>
-              <div className="stat-box">
-                <span className="stat-val">{profile?.following?.length || 0}</span>
-                <span className="stat-lbl">Following</span>
+              <div className="hero-stats" style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
+                <div className="stat-box">
+                  <span className="stat-val">{posts.length}</span>
+                  <span className="stat-lbl">posts</span>
+                </div>
+                <div className="stat-box">
+                  <span className="stat-val">{profile?.followers?.length || 0}</span>
+                  <span className="stat-lbl">followers</span>
+                </div>
+                <div className="stat-box">
+                  <span className="stat-val">{profile?.following?.length || 0}</span>
+                  <span className="stat-lbl">following</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="hero-bio-section">
-            <h2 className="display-name">{profile?.name}</h2>
-            <div className="title-tag">
-              <GraduationCap size={14} />
-              <span>{BRAND.memberTitle}</span>
-            </div>
-            {profile?.bio && <p className="bio-text">{profile.bio}</p>}
+          <div className="hero-bio-section" style={{ marginTop: '20px' }}>
+            <h2 className="display-name" style={{ fontSize: 16, fontWeight: 600, marginBottom: '4px' }}>{profile?.name}</h2>
+            {profile?.bio && <div className="bio-text" style={{ whiteSpace: 'pre-line', fontSize: 15, lineHeight: 1.4, margin: '4px 0 16px 0', color: 'rgba(255,255,255,0.9)' }}>{profile.bio}</div>}
+            {!profile?.bio && (
+              <div className="title-tag">
+                <GraduationCap size={14} />
+                <span>{BRAND.memberTitle}</span>
+              </div>
+            )}
             
-            <div className="skill-cloud">
-              {profile?.skills?.map(s => (
-                <span key={s} className="skill-pill">{s}</span>
-              ))}
-            </div>
+            {profile?.skills && profile.skills.length > 0 && (
+              <div className="skill-cloud">
+                {profile.skills.map(s => (
+                  <span key={s} className="skill-pill">{s}</span>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="hero-actions">
+          <div className="hero-actions" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {isOwnProfile ? (
-              <button className="btn-edit-active" onClick={() => navigate('/profile/edit')}>
-                Edit Personal Portfolio
-              </button>
+              <>
+                <button className="pill-outline-btn" style={{ alignSelf: 'flex-start' }}>
+                  <Plus size={16} /> Add banners
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="pill-btn-dark" onClick={() => navigate('/profile/edit')} style={{ flex: 1 }}>
+                    Edit profile
+                  </button>
+                  <button className="pill-btn-dark" style={{ flex: 1 }}>
+                    Share profile
+                  </button>
+                  <button className="pill-btn-icon-dark">
+                    <UserPlus size={18} />
+                  </button>
+                </div>
+              </>
             ) : (
-              <div className="action-button-row">
+              <div className="action-button-row" style={{ display: 'flex', gap: '8px' }}>
                 <button 
-                  className={isFollowing ? "btn-unfollow" : "btn-follow-cta"} 
+                  className={isFollowing ? "pill-btn-dark" : "pill-btn-primary"} 
                   onClick={handleFollow}
+                  style={{ flex: 2 }}
                 >
                   {isFollowing ? 'Following' : 'Connect +'}
                 </button>
-                <button className="btn-message-circle" onClick={() => navigate(`/chat/${userId}`)}>
+                <button className="pill-btn-dark" onClick={() => navigate(`/chat/${userId}`)} style={{ flex: 1 }}>
                   <MessageCircle size={18} />
                 </button>
-                <button className="btn-partner-heart" onClick={() => navigate(`/partner-chat/${userId}`)}>
+                <button className="pill-btn-dark" onClick={() => navigate(`/partner-chat/${userId}`)} style={{ flex: 1, color: '#ec4899' }}>
                   <Heart size={18} />
                 </button>
               </div>
@@ -326,16 +352,12 @@ export default function ProfilePage() {
           z-index: 10;
           max-width: 600px;
           margin: 0 auto;
-          padding: 0 16px;
+          padding: 0;
         }
 
         .profile-hero-card {
-          background: rgba(15, 15, 18, 0.8);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 32px;
-          padding: 24px;
-          margin-top: 20px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+          background: #0f1115;
+          padding: 20px 16px;
         }
 
         .hero-top {
@@ -347,6 +369,31 @@ export default function ProfilePage() {
 
         .portrait-wrapper {
           position: relative;
+        }
+        .vibe-bubble {
+          position: absolute;
+          top: -30px;
+          left: -10px;
+          background: #2a2c33;
+          color: rgba(255,255,255,0.7);
+          font-size: 11px;
+          padding: 8px 12px;
+          border-radius: 16px;
+          z-index: 20;
+          white-space: nowrap;
+          text-align: center;
+          line-height: 1.2;
+        }
+        .vibe-bubble::after {
+          content: '';
+          position: absolute;
+          bottom: -6px;
+          right: 20px;
+          width: 0;
+          height: 0;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 6px solid #2a2c33;
         }
         .story-ring-profile {
           padding: 4px;
@@ -361,21 +408,21 @@ export default function ProfilePage() {
         }
         .add-story-btn {
           position: absolute;
-          bottom: 3px;
-          right: 3px;
-          width: 30px;
-          height: 30px;
+          bottom: 2px;
+          right: 2px;
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
-          background: #3b82f6;
-          border: 3px solid #1a1a1a;
+          background: white;
+          border: 2px solid #0f1115;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: background 0.2s;
+          transition: transform 0.2s;
         }
         .add-story-btn:hover {
-          background: #2563eb;
+          transform: scale(1.1);
         }
         .streak-badge {
           position: absolute;
@@ -400,17 +447,18 @@ export default function ProfilePage() {
         .stat-box {
           display: flex;
           flex-direction: column;
-          align-items: center;
+          align-items: flex-start;
+          gap: 2px;
         }
         .stat-val {
-          font-size: 20px;
-          font-weight: 800;
+          font-size: 16px;
+          font-weight: 600;
         }
         .stat-lbl {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.5);
-          text-transform: uppercase;
-          letter-spacing: 1px;
+          font-size: 15px;
+          color: rgba(255, 255, 255, 0.9);
+          letter-spacing: 0px;
+          text-transform: none;
         }
 
         .hero-bio-section {
@@ -454,54 +502,54 @@ export default function ProfilePage() {
           display: flex;
           gap: 12px;
         }
-        .btn-edit-active {
-          width: 100%;
-          padding: 14px;
-          background: white;
-          color: black;
-          border-radius: 16px;
-          font-weight: 700;
-          font-size: 14px;
-        }
-        
-        .action-button-row {
+        .pill-outline-btn {
           display: flex;
-          width: 100%;
-          gap: 10px;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          background: transparent;
+          color: rgba(255,255,255,0.7);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
         }
-        .btn-follow-cta {
-          flex: 2;
-          background: white;
-          color: black;
-          border-radius: 14px;
-          font-weight: 700;
-        }
-        .btn-unfollow {
-          flex: 2;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
+        .pill-btn-dark {
+          padding: 8px 16px;
+          background: #2a2c33;
           color: white;
-          border-radius: 14px;
-          font-weight: 700;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: background 0.2s;
         }
-        .btn-message-circle, .btn-partner-heart {
-          flex: 1;
-          height: 48px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 14px;
+        .pill-btn-icon-dark {
+          padding: 0 12px;
+          background: #2a2c33;
+          color: white;
+          border: none;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: background 0.2s;
+          cursor: pointer;
         }
-        .btn-message-circle:hover { background: rgba(255,255,255,0.1); }
-        .btn-follow-cta, .btn-unfollow {
-          height: 48px;
-          padding: 0 20px;
+        .pill-btn-primary {
+          padding: 8px 16px;
+          background: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
         }
-        .btn-partner-heart { color: #ec4899; }
-        .btn-partner-heart:hover { background: rgba(236,72,153,0.1); }
+        .pill-btn-dark:hover, .pill-outline-btn:hover {
+          background: rgba(255,255,255,0.1);
+        }
 
         .section-tab-header {
           display: flex;
