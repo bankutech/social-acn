@@ -100,3 +100,35 @@ exports.getUserStories = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.toggleStoryLike = async (req, res) => {
+    try {
+        const story = await Story.findById(req.params.id);
+        if (!story) return res.status(404).json({ message: 'Story not found' });
+
+        const userId = req.user.id;
+        const isLiked = story.likes.includes(userId);
+
+        if (isLiked) {
+            story.likes = story.likes.filter(id => id.toString() !== userId);
+        } else {
+            story.likes.push(userId);
+            // Optionally, we could send a Push Notification to story.author here
+            const { sendPushNotification } = require('../utils/push');
+            if (story.author.toString() !== userId) {
+                const User = require('../models/User');
+                const sender = await User.findById(userId);
+                sendPushNotification(story.author, {
+                    title: sender ? sender.name : 'Someone',
+                    body: 'Liked your story ❤️',
+                    url: '/'
+                });
+            }
+        }
+
+        await story.save();
+        res.json({ liked: !isLiked, likesCount: story.likes.length });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

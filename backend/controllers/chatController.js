@@ -1,5 +1,6 @@
 const Chat = require('../models/Chat');
 const User = require('../models/User');
+const { sendPushNotification } = require('../utils/push');
 
 const getDemoChatStore = () => {
     if (!global.__acn_demo_chat_store) {
@@ -150,7 +151,18 @@ exports.sendMessage = async (req, res) => {
         const newMessage = populatedMessage.messages[populatedMessage.messages.length - 1];
 
         // Emit real-time message via Socket.io (will be handled in routes)
-        res.json(newMessage);
+        // Send Push Notification
+        const sender = await User.findById(req.user.id);
+        const recipientStrId = chat.participants.find(p => p.toString() !== req.user.id);
+        if (recipientStrId) {
+            sendPushNotification(recipientStrId, {
+                title: sender.name,
+                body: content || (normalizedType === 'image' ? 'Sent an image' : 'Sent a file'),
+                url: `/chat/${req.user.id}`
+            });
+        }
+
+        res.status(201).json(newMessage);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

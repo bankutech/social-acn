@@ -1,6 +1,8 @@
 const PartnerChat = require('../models/PartnerChat');
 const PartnerMessage = require('../models/PartnerMessage');
 const User = require('../models/User');
+const { getSocket, getConnectedUsers } = require('../socket');
+const { sendPushNotification } = require('../utils/push');
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -165,6 +167,17 @@ exports.sendPartnerMessage = async (req, res) => {
                 ? chat.user_two_id.toString() 
                 : chat.user_one_id.toString();
             io.to(`partner_${chatId}`).emit('partner_new_message', populated);
+        }
+
+        // Try to trigger push notification if recipient exists in participants list
+        const recipientId = chat.user_one_id.toString() === userId.toString() ? chat.user_two_id : chat.user_one_id;
+        if (recipientId) {
+             const sender = await User.findById(userId);
+             sendPushNotification(recipientId, {
+                 title: 'Partner Chat: ' + (sender ? sender.name : 'Partner'),
+                 body: content || 'Shared some media',
+                 url: `/partner-chat/${chatId}`
+             });
         }
 
         res.status(201).json(populated);

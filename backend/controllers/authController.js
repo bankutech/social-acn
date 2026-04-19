@@ -302,3 +302,25 @@ exports.getAllUsers = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.pushSubscribe = async (req, res) => {
+    try {
+        const subscription = req.body;
+        const userId = req.user.id || req.user._id;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        
+        // Remove existing identical subscription if there
+        user.pushSubscriptions = user.pushSubscriptions.filter(s => s.endpoint !== subscription.endpoint);
+        
+        user.pushSubscriptions.push(subscription);
+        await user.save();
+        res.status(201).json({ message: 'Subscribed successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+exports.getVapidPublicKey = (req, res) => {
+    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+};

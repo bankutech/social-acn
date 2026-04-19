@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { 
     registerUser, loginUser, googleLogin, getUserProfile, getOtherProfile,
-    updateProfile, toggleFollow, exploreUsers, searchUsers, getAllUsers
+    updateProfile, toggleFollow, exploreUsers, searchUsers, getAllUsers, pushSubscribe, getVapidPublicKey
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 const { upload, setUploadType } = require('../config/upload');
@@ -17,6 +17,8 @@ router.post('/follow/:userId', protect, toggleFollow);
 router.get('/explore', protect, exploreUsers);
 router.get('/search', protect, searchUsers);
 router.get('/all-users', protect, getAllUsers);
+router.get('/push/vapidPublicKey', protect, getVapidPublicKey);
+router.post('/push/subscribe', protect, pushSubscribe);
 
 // Avatar upload
 router.post('/avatar', protect, setUploadType('avatars'), upload.single('file'), (req, res) => {

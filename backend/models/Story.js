@@ -5,6 +5,7 @@ const StorySchema = new mongoose.Schema({
     content: { type: String, required: true },
     type: { type: String, enum: ['text', 'image'], default: 'text' },
     imageUrl: { type: String },
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     viewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     expiresAt: { type: Date, default: Date.now, expires: 86400 } // Auto-delete after 24 hours
 }, { timestamps: true });

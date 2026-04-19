@@ -16,9 +16,25 @@ import AIPage from './pages/AIPage';
 import AdminPage from './pages/AdminPage';
 import { Toaster, toast } from 'react-hot-toast';
 import { getSocket } from './lib/socket';
-import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import api from './lib/api';
 import './App.css';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -70,6 +86,37 @@ function App() {
 
     socket.on('new_message', handleNewMsg);
     socket.on('partner_new_message', handlePartnerMsg);
+
+    // Setup Push Notifications
+    const setupPush = async () => {
+      try {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') return;
+
+          const register = await navigator.serviceWorker.register('/sw.js');
+          let subscription = await register.pushManager.getSubscription();
+          
+          if (!subscription) {
+            const res = await api.get('/api/push/vapidPublicKey');
+            const publicVapidKey = res.data?.publicKey || res.publicKey;
+            if (!publicVapidKey) return;
+            
+            subscription = await register.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+            });
+          }
+
+          // Send to backend
+          await api.post('/api/push/subscribe', subscription);
+        }
+      } catch (err) {
+        console.error('Push setup failed:', err);
+      }
+    };
+
+    setupPush();
 
     return () => {
       socket.off('new_message', handleNewMsg);

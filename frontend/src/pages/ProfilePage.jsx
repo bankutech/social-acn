@@ -5,6 +5,7 @@ import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
 import SkeletonLoader from '../components/SkeletonLoader';
+import StoryViewer from '../components/StoryViewer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3, Briefcase, GraduationCap, Film, Plus, UserPlus } from 'lucide-react';
 import { BRAND } from '../config/brand';
@@ -279,32 +280,11 @@ export default function ProfilePage() {
 
       {/* View Story */}
       {viewingStory && (
-        <div className="modal-overlay" onClick={() => setViewingStory(null)} style={{ background: 'rgba(0,0,0,0.95)', position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="story-viewer" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '400px', minHeight: '60vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-            <div className="story-progress" style={{ height: '3px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', marginBottom: '12px', overflow: 'hidden' }}>
-              <div className="story-progress-fill" style={{ height: '100%', background: 'white', borderRadius: '2px', width: '100%' }} />
-            </div>
-            <div className="story-viewer-header" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', padding: '0 16px' }}>
-              <Avatar src={viewingStory.author?.avatarUrl} name={viewingStory.author?.name} size={36} />
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{viewingStory.author?.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  {new Date(viewingStory.createdAt).toLocaleTimeString()}
-                </div>
-              </div>
-            </div>
-            <div className="story-viewer-content" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', textAlign: 'center', padding: '20px' }}>
-              {viewingStory.type === 'image' && viewingStory.imageUrl ? (
-                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <img src={api.getFileUrl(viewingStory.imageUrl)} alt="" style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: 12, marginBottom: 12 }} />
-                  {viewingStory.content && <p style={{ fontSize: 16 }}>{viewingStory.content}</p>}
-                </div>
-              ) : (
-                <p>{viewingStory.content}</p>
-              )}
-            </div>
-          </div>
-        </div>
+        <StoryViewer 
+          story={viewingStory} 
+          onClose={() => setViewingStory(null)} 
+          currentUserId={user?._id || user?.id} 
+        />
       )}
 
       <style>{`
