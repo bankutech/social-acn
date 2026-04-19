@@ -109,12 +109,6 @@ export default function StoryBar({ stories = [], onRefresh }) {
           overflow: hidden;
           text-overflow: ellipsis;
         }
-          .story-progress-fill {
-          height: 100%;
-          background: white;
-          border-radius: 2px;
-          animation: storyTimer 5s linear forwards;
-        }
         @keyframes storyTimer {
           from { width: 0; }
           to { width: 100%; }

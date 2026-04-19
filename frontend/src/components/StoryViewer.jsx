@@ -5,7 +5,9 @@ import { Heart, Send } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function StoryViewer({ story, onClose, currentUserId }) {
-  const [liked, setLiked] = useState(story?.likes?.includes(currentUserId) || false);
+  const [liked, setLiked] = useState(
+    story?.likes?.some(l => (l._id || l?.toString?.() || l) === currentUserId) || false
+  );
   const [replyText, setReplyText] = useState('');
   const [isPaused, setIsPaused] = useState(false);
   const timerRef = useRef(null);

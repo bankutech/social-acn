@@ -5,7 +5,7 @@ import StoryBar from '../components/StoryBar';
 import PostCard from '../components/PostCard';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Search, Bell, PlusCircle } from 'lucide-react';
+import { Sparkles, Search, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../config/brand';
 
@@ -55,9 +55,6 @@ export default function FeedPage() {
           </button>
           <button className="nav-action-btn" onClick={() => navigate('/ai')} title="AI Assistant">
             <Sparkles size={20} className="ai-spark-icon" />
-          </button>
-          <button className="nav-action-btn" onClick={() => navigate('/notifications')} title="Notifications">
-            <Bell size={20} />
           </button>
         </div>
       </header>

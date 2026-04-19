@@ -87,7 +87,15 @@ function App() {
     socket.on('new_message', handleNewMsg);
     socket.on('partner_new_message', handlePartnerMsg);
 
-    // Setup Push Notifications
+    return () => {
+      socket.off('new_message', handleNewMsg);
+      socket.off('partner_new_message', handlePartnerMsg);
+    };
+  }, [user, location.pathname, navigate]);
+
+  // Push notification setup — only runs once per login session
+  useEffect(() => {
+    if (!user) return;
     const setupPush = async () => {
       try {
         if ('serviceWorker' in navigator && 'PushManager' in window) {
@@ -96,18 +104,17 @@ function App() {
 
           const register = await navigator.serviceWorker.register('/sw.js');
           let subscription = await register.pushManager.getSubscription();
-          
+
           if (!subscription) {
             const res = await api.get('/api/push/vapidPublicKey');
-            const publicVapidKey = res.data?.publicKey || res.publicKey;
+            const publicVapidKey = res.publicKey;
             if (!publicVapidKey) return;
-            
+
             subscription = await register.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
             });
           }
-
           // Send to backend
           await api.post('/api/push/subscribe', subscription);
         }
@@ -115,14 +122,8 @@ function App() {
         console.error('Push setup failed:', err);
       }
     };
-
     setupPush();
-
-    return () => {
-      socket.off('new_message', handleNewMsg);
-      socket.off('partner_new_message', handlePartnerMsg);
-    };
-  }, [user, location.pathname, navigate]);
+  }, [user?._id]);
 
   if (loading) {
     return <div className="app-loader"><div className="loader-spinner" /></div>;
