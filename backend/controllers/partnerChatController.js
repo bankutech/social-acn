@@ -279,3 +279,29 @@ exports.getMyPartnerChats = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.deletePartnerChat = async (req, res) => {
+    try {
+        const userId = req.user._id || req.user.id;
+        
+        if (userId === 'mock_id_123' || !isValidObjectId(userId)) {
+            return res.json({ success: true });
+        }
+
+        const chat = await PartnerChat.findOne({
+            _id: req.params.chatId,
+            $or: [{ user_one_id: userId }, { user_two_id: userId }]
+        });
+
+        if (!chat) {
+            return res.status(404).json({ message: 'Chat not found' });
+        }
+
+        await PartnerChat.deleteOne({ _id: req.params.chatId });
+        await PartnerMessage.deleteMany({ chat_id: req.params.chatId });
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

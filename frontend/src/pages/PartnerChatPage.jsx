@@ -5,7 +5,7 @@ import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import { getSocket } from '../lib/socket';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send, Smile, Camera, X, Palette, Clock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Send, Smile, Camera, X, Palette, Clock, ShieldCheck, MoreVertical } from 'lucide-react';
 
 const THEMES = {
   purple_dark:  { name: 'Purple dark',  bg: '#130d24', msgBg: '#1e1535', accent: '#7c3aed', inputBg: 'rgba(255,255,255,0.07)' },
@@ -26,6 +26,7 @@ export default function PartnerChatPage() {
   const [partner, setPartner] = useState(null);
   const [theme, setTheme] = useState('purple_dark');
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [imagePreview, setImagePreview] = useState('');
   const [imageFile, setImageFile] = useState(null);
@@ -195,6 +196,14 @@ export default function PartnerChatPage() {
   const formatTime = (date) =>
     new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const handleDeleteChat = async () => {
+    if (!chat?._id || !window.confirm('Are you sure you want to delete this partner chat?')) return;
+    try {
+      await api.delete(`/api/partner-chat/${chat._id}`);
+      navigate('/chat');
+    } catch {}
+  };
+
   const t = THEMES[theme] || THEMES.purple_dark;
 
   return (
@@ -250,6 +259,23 @@ export default function PartnerChatPage() {
           >
             <Palette size={18} />
           </button>
+
+          <div style={{ position: 'relative' }}>
+            <button
+              className="pc-icon-btn"
+              onClick={() => setShowMenu(!showMenu)}
+              aria-label="More options"
+            >
+              <MoreVertical size={18} />
+            </button>
+            {showMenu && (
+              <div className="pc-menu-dropdown">
+                <button onClick={handleDeleteChat} className="pc-menu-item" style={{ color: '#ef4444' }}>
+                  Delete Chat
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
         {/* ── Privacy bar ── */}
@@ -576,6 +602,33 @@ export default function PartnerChatPage() {
           font-size: 11px;
           margin-top: 1px;
           transition: color 0.2s;
+        }
+
+        .pc-menu-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 8px;
+          background: rgba(20,20,20,0.95);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px;
+          padding: 4px;
+          min-width: 140px;
+          z-index: 50;
+        }
+        .pc-menu-item {
+          width: 100%;
+          text-align: left;
+          padding: 8px 12px;
+          background: none;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          color: #fff;
+        }
+        .pc-menu-item:hover {
+          background: rgba(255,255,255,0.1);
         }
 
         /* ── Privacy bar ── */

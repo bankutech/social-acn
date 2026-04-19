@@ -14,6 +14,10 @@ import EditProfilePage from './pages/EditProfilePage';
 import ExplorePage from './pages/ExplorePage';
 import AIPage from './pages/AIPage';
 import AdminPage from './pages/AdminPage';
+import { Toaster, toast } from 'react-hot-toast';
+import { getSocket } from './lib/socket';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 
 function ProtectedRoute({ children }) {
@@ -25,6 +29,53 @@ function ProtectedRoute({ children }) {
 
 function App() {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) return;
+    const socket = getSocket();
+
+    const handleNewMsg = (data) => {
+      const msg = data.message || data;
+      const senderId = msg.sender?._id || msg.sender;
+      // Do not show toast if we are on the chat page of this user
+      if (location.pathname === `/chat/${senderId}` || location.pathname === `/partner-chat/${senderId}`) return;
+      if (String(senderId) !== String(user._id)) {
+        toast((t) => (
+          <div onClick={() => { toast.dismiss(t.id); navigate(`/chat/${senderId}`); }} style={{ cursor: 'pointer' }}>
+            <strong>New message</strong>
+            <p style={{ margin: 0, fontSize: '0.9em' }}>
+              {msg.content || (msg.mediaUrl ? 'Sent an attachment' : 'New message')}
+            </p>
+          </div>
+        ));
+      }
+    };
+
+    const handlePartnerMsg = (msg) => {
+      const senderId = msg.sender_id?._id || msg.sender_id;
+      if (location.pathname === `/partner-chat/${senderId}` || location.pathname === `/chat/${senderId}`) return;
+      if (String(senderId) !== String(user._id)) {
+        toast((t) => (
+          <div onClick={() => { toast.dismiss(t.id); navigate(`/partner-chat/${senderId}`); }} style={{ cursor: 'pointer' }}>
+            <strong style={{ color: '#ec4899' }}>Partner message 🔒</strong>
+            <p style={{ margin: 0, fontSize: '0.9em' }}>
+              {msg.content || (msg.image_url ? 'Sent an image' : 'New message')}
+            </p>
+          </div>
+        ));
+      }
+    };
+
+    socket.on('new_message', handleNewMsg);
+    socket.on('partner_new_message', handlePartnerMsg);
+
+    return () => {
+      socket.off('new_message', handleNewMsg);
+      socket.off('partner_new_message', handlePartnerMsg);
+    };
+  }, [user, location.pathname, navigate]);
 
   if (loading) {
     return <div className="app-loader"><div className="loader-spinner" /></div>;
@@ -50,6 +101,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {user && <BottomNav />}
+      <Toaster position="top-center" toastOptions={{ style: { background: '#2d2d2d', color: '#fff' } }} />
     </div>
   );
 }

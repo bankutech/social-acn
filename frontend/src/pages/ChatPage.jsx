@@ -20,6 +20,7 @@ export default function ChatPage() {
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaPreview, setMediaPreview] = useState('');
   const [mediaType, setMediaType] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimeout = useRef(null);
 
@@ -131,6 +132,16 @@ export default function ChatPage() {
   const formatTime = (date) =>
     new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const handleDeleteChat = async () => {
+    if (!chat?._id || !window.confirm('Are you sure you want to delete this chat?')) return;
+    try {
+      await api.delete(`/api/chat/${chat._id}`);
+      navigate('/chat');
+    } catch (e) {
+      setError('Failed to delete chat');
+    }
+  };
+
   return (
     <>
       <div className="chat-page" role="main" aria-label="Chat conversation">
@@ -159,9 +170,18 @@ export default function ChatPage() {
             </div>
           </button>
 
-          <button className="chat-icon-btn" aria-label="More options">
-            <MoreVertical size={18} />
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button className="chat-icon-btn" aria-label="More options" onClick={() => setShowMenu(!showMenu)}>
+              <MoreVertical size={18} />
+            </button>
+            {showMenu && (
+              <div className="chat-menu-dropdown">
+                <button onClick={handleDeleteChat} className="chat-menu-item" style={{ color: 'var(--error, #ef4444)' }}>
+                  Delete Chat
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
         {/* Messages */}
@@ -363,6 +383,33 @@ export default function ChatPage() {
         .chat-icon-btn:hover {
           background: var(--bg-elevated);
           color: var(--text-primary);
+        }
+
+        .chat-menu-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          margin-top: 8px;
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          padding: 4px;
+          min-width: 140px;
+          z-index: 50;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .chat-menu-item {
+          width: 100%;
+          text-align: left;
+          padding: 8px 12px;
+          background: none;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        .chat-menu-item:hover {
+          background: var(--bg-hover);
         }
 
         /* ── Messages ── */
