@@ -100,7 +100,7 @@ export default function ChatPage() {
       }
       const msg = await api.post('/api/chat/send', { content, receiverId: userId, message_type, mediaUrl });
       setMessages(prev => [...prev, msg]);
-      getSocket().emit('private_message', { receiverId: userId, content, message_type, mediaUrl, chatId: chat?._id });
+      getSocket().emit('private_message', { receiverId: userId, message: msg, chatId: chat?._id });
       setMediaFile(null);
       setMediaPreview('');
       setMediaType('');

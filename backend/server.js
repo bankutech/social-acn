@@ -126,18 +126,13 @@ io.on('connection', (socket) => {
 
     // Handle private messages (regular chat)
     socket.on('private_message', async (data) => {
-        const { receiverId, content, chatId } = data;
+        const { receiverId, message, chatId } = data;
         const receiverSocketId = connectedUsers.get(receiverId);
 
         if (receiverSocketId) {
             io.to(receiverSocketId).emit('new_message', {
                 type: 'new_message',
-                message: {
-                    sender: socket.userId,
-                    content,
-                    timestamp: new Date(),
-                    read: false
-                },
+                message: message, // Pass the full message object with _id
                 chatId
             });
         }
