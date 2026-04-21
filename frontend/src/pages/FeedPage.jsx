@@ -158,16 +158,6 @@ export default function FeedPage() {
         </div>
       </main>
 
-      {/* Floating Create Button */}
-      <motion.button 
-        className="floating-add-btn"
-        whileHover={{ scale: 1.1, rotate: 90 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => navigate('/create')}
-      >
-        <PlusCircle size={32} />
-      </motion.button>
-
       <style>{`
         .premium-feed-layout {
           background: #000000;
@@ -333,21 +323,6 @@ export default function FeedPage() {
         }
         .btn-premium-accent:hover { transform: scale(1.05); }
 
-        /* FLOATING ACTION */
-        .floating-add-btn {
-          position: fixed;
-          bottom: calc(var(--bottom-nav-height, 70px) + 24px);
-          right: 24px;
-          width: 64px;
-          height: 64px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #7c3aed, #a78bfa);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 12px 32px rgba(124, 58, 237, 0.4);
-          z-index: 900;
         }
 
         /* SKELETONS */
