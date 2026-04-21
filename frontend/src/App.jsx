@@ -14,6 +14,7 @@ import EditProfilePage from './pages/EditProfilePage';
 import ExplorePage from './pages/ExplorePage';
 import AIPage from './pages/AIPage';
 import AdminPage from './pages/AdminPage';
+import AIFloatingAssistant from './components/AIFloatingAssistant';
 import { Toaster, toast } from 'react-hot-toast';
 import { getSocket } from './lib/socket';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -150,6 +151,7 @@ function App() {
       </Routes>
       {user && <BottomNav />}
       <Toaster position="top-center" toastOptions={{ style: { background: '#2d2d2d', color: '#fff' } }} />
+      {user && <AIFloatingAssistant />}
     </div>
   );
 }
