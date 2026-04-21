@@ -2,8 +2,8 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Image, Code, Type, Sparkles, X, Send, Video, Grid3X3, Film } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Image, Code, Type, Sparkles, X, Send, Video, LayoutGrid as Grid } from 'lucide-react';
 
 export default function CreatePostPage() {
   const { user } = useAuth();
@@ -187,9 +187,9 @@ export default function CreatePostPage() {
           {/* Main Mode Toggle: Creative Toolbar */}
           <div className="creative-toolbar">
             {[
-              { key: 'post', icon: Grid3X3, label: 'Post', gradient: 'from-cyan' },
+              { key: 'post', icon: Grid, label: 'Post', gradient: 'from-cyan' },
               { key: 'story', icon: Image, label: 'Story', gradient: 'from-pink' },
-              { key: 'reel', icon: Film, label: 'Reel', gradient: 'from-amber' },
+              { key: 'reel', icon: Video, label: 'Reel', gradient: 'from-amber' },
             ].map(t => (
               <button
                 key={t.key}
