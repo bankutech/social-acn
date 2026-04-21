@@ -14,7 +14,9 @@ const ReelSchema = new mongoose.Schema({
         createdAt: { type: Date, default: Date.now }
     }],
     duration: { type: Number, default: 60 }, // in seconds
-    visibility: { type: String, enum: ['public', 'followers'], default: 'followers' }
+    visibility: { type: String, enum: ['public', 'followers'], default: 'followers' },
+    cloudinaryPublicId: { type: String },
+    thumbnailPublicId: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Reel', ReelSchema);

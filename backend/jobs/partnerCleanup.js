@@ -1,24 +1,24 @@
 const PartnerMessage = require('../models/PartnerMessage');
-const fs = require('fs');
+const { cloudinary } = require('../config/upload');
 const path = require('path');
 
 const cleanupExpiredPartnerMessages = async () => {
     try {
-        // Find expired messages with images before MongoDB TTL deletes them
-        const expiredWithImages = await PartnerMessage.find({
+        // Find expired messages with Cloudinary public IDs
+        const expiredWithCloudinary = await PartnerMessage.find({
             expires_at: { $lt: new Date() },
-            message_type: 'image',
-            image_url: { $ne: '' }
+            cloudinary_public_id: { $ne: '' }
         });
-
-        // Delete image files
-        for (const msg of expiredWithImages) {
-            if (msg.image_url) {
-                const filePath = path.join(__dirname, '..', msg.image_url);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
-                    console.log(`[Cleanup] Deleted image: ${msg.image_url}`);
-                }
+        
+        // Delete from Cloudinary
+        if (expiredWithCloudinary.length > 0) {
+            const publicIds = expiredWithCloudinary.map(m => m.cloudinary_public_id);
+            try {
+                // delete_resources handles multiple public_ids for images
+                await cloudinary.api.delete_resources(publicIds);
+                console.log(`[Cleanup] Deleted ${publicIds.length} resources from Cloudinary`);
+            } catch (err) {
+                console.error('[Cleanup] Cloudinary Deletion Error:', err.message);
             }
         }
 

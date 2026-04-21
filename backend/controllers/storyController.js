@@ -29,7 +29,8 @@ exports.createStory = async (req, res) => {
             author: req.user._id || req.user.id,
             content,
             type: type || 'text',
-            imageUrl
+            imageUrl,
+            cloudinaryPublicId: req.body.cloudinaryPublicId // Passed from frontend
         });
 
         const populatedStory = await Story.findById(story._id).populate('author', 'name avatarUrl');

@@ -1,6 +1,6 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
-const fs = require('fs');
+const { cloudinary } = require('../config/upload');
 const path = require('path');
 
 const getDemoStore = () => {
@@ -52,8 +52,9 @@ exports.createPost = async (req, res) => {
         const post = await Post.create({
             author: req.user._id || req.user.id,
             content,
-            type: type || 'text',
+            type: typeof imageUrl === 'string' && imageUrl.length > 0 ? 'image' : (type || 'text'),
             imageUrl,
+            cloudinaryPublicId: req.body.cloudinaryPublicId, // Passed from frontend upload
             codeSnippet,
             codeLanguage
         });
@@ -205,12 +206,16 @@ exports.deletePost = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to delete this post' });
         }
 
-        // Delete local image if exists
-        if (post.imageUrl && post.imageUrl.startsWith('/uploads/')) {
-            const filePath = path.join(__dirname, '..', post.imageUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
+        // Delete Cloudinary image if exists
+        if (post.cloudinaryPublicId) {
+            try {
+                await cloudinary.uploader.destroy(post.cloudinaryPublicId);
+            } catch (err) {
+                console.error('Cloudinary Delete Error:', err);
             }
+        } else if (post.imageUrl && post.imageUrl.includes('cloudinary.com')) {
+            // Fallback: try to extract public_id from URL if possible, or just skip
+            // Best practice is to have the public_id stored
         }
 
         await Post.findByIdAndDelete(req.params.id);

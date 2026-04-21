@@ -36,7 +36,7 @@ export default function AIFloatingAssistant() {
         onClick={() => setIsOpen(!isOpen)}
         style={{
              position: 'fixed',
-             bottom: '90px',
+             bottom: '180px',
              right: '24px',
              width: '56px',
              height: '56px',
@@ -101,7 +101,7 @@ export default function AIFloatingAssistant() {
       <style>{`
         .ai-compact-window {
           position: fixed;
-          bottom: 160px;
+          bottom: 250px;
           right: 24px;
           width: 320px;
           height: 400px;

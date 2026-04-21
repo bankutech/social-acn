@@ -1,6 +1,6 @@
 const Reel = require('../models/Reel');
 const User = require('../models/User');
-const fs = require('fs');
+const { cloudinary } = require('../config/upload');
 const path = require('path');
 
 exports.createReel = async (req, res) => {
@@ -36,7 +36,9 @@ exports.createReel = async (req, res) => {
             author: req.user._id || req.user.id,
             title,
             videoUrl,
+            cloudinaryPublicId: req.body.cloudinaryPublicId, // Passed from frontend
             thumbnailUrl,
+            thumbnailPublicId: req.body.thumbnailPublicId, // Passed from frontend
             hashtags: Array.isArray(hashtags)
                 ? hashtags
                 : (hashtags ? hashtags.split(',').map(tag => tag.trim()).filter(Boolean) : [])
@@ -141,11 +143,21 @@ exports.deleteReel = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to delete this reel' });
         }
 
-        // Delete local video file if exists
-        if (reel.videoUrl && reel.videoUrl.startsWith('/uploads/')) {
-            const filePath = path.join(__dirname, '..', reel.videoUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
+        // Delete Cloudinary video if exists
+        if (reel.cloudinaryPublicId) {
+            try {
+                await cloudinary.uploader.destroy(reel.cloudinaryPublicId, { resource_type: 'video' });
+            } catch (err) {
+                console.error('Cloudinary Reel Delete Error:', err);
+            }
+        }
+
+        // Delete thumbnail if exists
+        if (reel.thumbnailPublicId) {
+            try {
+                await cloudinary.uploader.destroy(reel.thumbnailPublicId);
+            } catch (err) {
+                console.error('Cloudinary Reel Thumbnail Delete Error:', err);
             }
         }
 

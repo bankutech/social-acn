@@ -112,9 +112,9 @@ exports.getPartnerMessages = async (req, res) => {
 // SEND partner message
 exports.sendPartnerMessage = async (req, res) => {
     try {
-        const { chatId } = req.params;
-        const { content, message_type, image_url } = req.body;
-        const userId = req.user._id || req.user.id;
+    const { chatId } = req.params;
+    const { content, message_type, image_url, cloudinary_public_id } = req.body;
+    const userId = req.user._id || req.user.id;
 
         if (String(chatId).startsWith('demo_partner_') || !isValidObjectId(userId)) {
             const store = getDemoPartnerStore();
@@ -152,6 +152,7 @@ exports.sendPartnerMessage = async (req, res) => {
             message_type: message_type || 'text',
             content: content || '',
             image_url: image_url || '',
+            cloudinary_public_id: cloudinary_public_id || '',
             created_at: now,
             expires_at: chat.expires_enabled ? expiresAt : new Date('9999-12-31')
         });
@@ -201,8 +202,11 @@ exports.uploadPartnerImage = async (req, res) => {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        const imageUrl = `/uploads/partner/${req.file.filename}`;
-        res.json({ image_url: imageUrl });
+        // multer-storage-cloudinary provides the full URL in path and the public_id in filename
+        res.json({ 
+            image_url: req.file.path,
+            cloudinary_public_id: req.file.filename 
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

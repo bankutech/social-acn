@@ -124,17 +124,20 @@ export default function PartnerChatPage() {
 
     try {
       let image_url = '';
+      let cloudinary_public_id = '';
       if (imageFile) {
         const fd = new FormData();
         fd.append('image', imageFile);
         const up = await api.upload(`/api/partner-chat/${chat._id}/upload`, fd);
         image_url = up.image_url;
+        cloudinary_public_id = up.cloudinary_public_id;
       }
 
       const msg = await api.post(`/api/partner-chat/${chat._id}/message`, {
         content,
         message_type: image_url ? 'image' : 'text',
         image_url,
+        cloudinary_public_id,
       });
 
       setMessages(prev => [...prev, msg]);

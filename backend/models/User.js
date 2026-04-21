@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema({
     password: { type: String, required: true, select: false },
     googleId: { type: String, unique: true, sparse: true },
     avatarUrl: { type: String, default: 'https://i.pravatar.cc/150' },
+    avatarPublicId: { type: String },
     bio: { type: String, default: '' },
     skills: [{ type: String }],
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

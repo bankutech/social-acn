@@ -41,14 +41,19 @@ export default function EditProfilePage() {
     setError('');
     try {
       let avatarUrl;
+      let avatarPublicId;
       if (avatarFile) {
         const fd = new FormData();
         fd.append('file', avatarFile);
         const res = await api.upload('/api/auth/avatar', fd);
         avatarUrl = res.url;
+        avatarPublicId = res.filename;
       }
       
-      const payload = { ...form, ...(avatarUrl ? { avatarUrl } : {}) };
+      const payload = { 
+        ...form, 
+        ...(avatarUrl ? { avatarUrl, avatarPublicId } : {}) 
+      };
       const updatedUserRes = await api.put('/api/auth/profile', payload);
       
       // CRITICAL FIX: Ensure the state is deep merged and token is preserved

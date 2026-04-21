@@ -6,6 +6,7 @@ const PartnerMessageSchema = new mongoose.Schema({
     message_type: { type: String, enum: ['text', 'image'], default: 'text' },
     content: { type: String, default: '' },
     image_url: { type: String, default: '' },
+    cloudinary_public_id: { type: String, default: '' },
     created_at: { type: Date, default: Date.now },
     expires_at: { type: Date, required: true }
 });

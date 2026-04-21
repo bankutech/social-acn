@@ -201,7 +201,7 @@ exports.getOtherProfile = async (req, res) => {
 // Update profile
 exports.updateProfile = async (req, res) => {
     try {
-        const { name, bio, skills, avatarUrl } = req.body;
+        const { name, bio, skills, avatarUrl, avatarPublicId } = req.body;
         const userId = req.user.id || req.user._id;
 
         const user = await User.findById(userId);
@@ -211,7 +211,13 @@ exports.updateProfile = async (req, res) => {
         if (name) user.name = name;
         if (bio !== undefined) user.bio = bio;
         if (skills) user.skills = skills;
-        if (avatarUrl) user.avatarUrl = avatarUrl;
+        
+        // If updating avatar, we should ideally delete the old one from Cloudinary
+        // However, we'll keep it simple for now and just update the fields
+        if (avatarUrl) {
+            user.avatarUrl = avatarUrl;
+            if (avatarPublicId) user.avatarPublicId = avatarPublicId;
+        }
 
         await user.save();
         res.json(user);

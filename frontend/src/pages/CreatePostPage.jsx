@@ -79,16 +79,19 @@ export default function CreatePostPage() {
       if (createMode === 'post') {
         if (!content.trim() && !imageFile && !codeSnippet.trim()) return setLoading(false);
         let imageUrl = '';
+        let cloudinaryPublicId = '';
         if (imageFile) {
           const fd = new FormData();
           fd.append('file', imageFile);
           const uploadRes = await api.upload('/api/upload/image/posts', fd);
           imageUrl = uploadRes.url;
+          cloudinaryPublicId = uploadRes.filename; // filename is the public_id
         }
         await api.post('/api/posts', {
           content,
           type: postType,
           imageUrl,
+          cloudinaryPublicId,
           codeSnippet: postType === 'code' ? codeSnippet : undefined,
           codeLanguage: postType === 'code' ? codeLanguage : undefined,
         });
@@ -97,16 +100,19 @@ export default function CreatePostPage() {
       else if (createMode === 'story') {
         if (!content.trim() && !imageFile) return setLoading(false);
         let imageUrl = '';
+        let cloudinaryPublicId = '';
         if (imageFile) {
           const fd = new FormData();
           fd.append('file', imageFile);
           const uploadRes = await api.upload('/api/upload/image/stories', fd);
           imageUrl = uploadRes.url;
+          cloudinaryPublicId = uploadRes.filename;
         }
         await api.post('/api/stories', {
           content: content || 'My Story',
           type: imageFile ? 'image' : 'text',
-          imageUrl
+          imageUrl,
+          cloudinaryPublicId
         });
         navigate('/');
       }
@@ -119,6 +125,7 @@ export default function CreatePostPage() {
         await api.post('/api/reels', {
           title: reelTitle,
           videoUrl: uploadRes.url,
+          cloudinaryPublicId: uploadRes.filename,
           hashtags: reelHashtags,
         });
         navigate('/reels');
