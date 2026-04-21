@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
-import SkeletonLoader from '../components/SkeletonLoader';
+import Skeleton from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, UserPlus, UserCheck, Sparkles, TrendingUp, Users, X } from 'lucide-react';
 
@@ -87,8 +87,18 @@ export default function ExplorePage() {
         <div className="explorer-grid">
           <AnimatePresence mode="popLayout">
             {loading ? (
-              <div style={{ padding: 16 }}>
-                {[1, 2, 3, 4].map(i => <div key={i} className="skeleton-explorer-row" />)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="premium-user-card" style={{ pointerEvents: 'none' }}>
+                    <div className="card-user-meta">
+                      <Skeleton width="60px" height="60px" borderRadius="50%" />
+                      <div className="user-text-meta">
+                        <Skeleton width="140px" height="16px" style={{ marginBottom: 8 }} />
+                        <Skeleton width="200px" height="12px" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : displayUsers.length === 0 ? (
               <motion.div

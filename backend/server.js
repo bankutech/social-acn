@@ -32,17 +32,25 @@ app.set('io', io);
 
 // Middleware
 // Middleware
-const allowedOrigins = [
-    'http://localhost:5173', // Local dev
-    'https://social-acn.vercel.app', // Replace with your actual Vercel URL
-    /\.vercel\.app$/ // Any Vercel preview branch
-];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(o => o.trim());
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.some(o => typeof o === 'string' ? o === origin : o.test(origin))) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        const isAllowed = allowedOrigins.some(ao => {
+            if (ao.includes('*')) {
+                const reg = new RegExp('^' + ao.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
+                return reg.test(origin);
+            }
+            return ao === origin;
+        });
+
+        if (isAllowed) {
             callback(null, true);
         } else {
+            console.warn(`Blocked by CORS: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },

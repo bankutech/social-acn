@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import StoryBar from '../components/StoryBar';
 import PostCard from '../components/PostCard';
-import SkeletonLoader from '../components/SkeletonLoader';
+import { PostSkeleton } from '../components/Skeleton';
+import Skeleton from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Search, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -64,7 +65,7 @@ export default function FeedPage() {
         <section className="stories-section">
           {loading ? (
             <div className="stories-skeleton-row">
-              {[1, 2, 3, 4, 5].map(i => <div key={i} className="skeleton-circle-story" />)}
+              {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} width="64px" height="64px" borderRadius="50%" />)}
             </div>
           ) : (
             <StoryBar stories={stories} onRefresh={loadFeed} />
@@ -76,7 +77,7 @@ export default function FeedPage() {
           <AnimatePresence mode="popLayout">
             {loading ? (
               <div className="feed-skeleton-stack">
-                {[1, 2, 3].map(i => <div key={i} className="skeleton-card-premium" />)}
+                {[1, 2, 3].map(i => <PostSkeleton key={i} />)}
               </div>
             ) : posts.length === 0 ? (
               <motion.div
