@@ -32,28 +32,9 @@ app.set('io', io);
 
 // Middleware
 // Middleware
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(o => o.trim());
-
+// TEMPORARY: Allow all origins to debug "Failed to Fetch"
 app.use(cors({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        const isAllowed = allowedOrigins.some(ao => {
-            if (ao.includes('*')) {
-                const reg = new RegExp('^' + ao.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
-                return reg.test(origin);
-            }
-            return ao === origin;
-        });
-
-        if (isAllowed) {
-            callback(null, true);
-        } else {
-            console.warn(`Blocked by CORS: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: true,
     credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
