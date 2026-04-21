@@ -23,7 +23,8 @@ router.post('/push/subscribe', protect, pushSubscribe);
 // Avatar upload
 router.post('/avatar', protect, setUploadType('avatars'), upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file' });
-    res.json({ url: `/uploads/avatars/${req.file.filename}` });
+    // req.file.path is the Cloudinary URL
+    res.json({ url: req.file.path });
 });
 
 module.exports = router;
