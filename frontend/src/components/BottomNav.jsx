@@ -18,124 +18,155 @@ export default function BottomNav() {
   if (location.pathname.match(/^\/chat\/.+/) || location.pathname.match(/^\/partner-chat\/.+/)) return null;
 
   return (
-    <nav style={{
-      position: 'fixed',
-      bottom: 0, left: 0, right: 0,
-      zIndex: 1000,
-      display: 'flex',
-      justifyContent: 'center',
-      padding: '0 0 env(safe-area-inset-bottom, 0px)',
-      pointerEvents: 'none'
-    }}>
-      <div style={{
-        pointerEvents: 'auto',
-        width: '100%',
-        maxWidth: 480,
-        background: 'rgba(10,10,12,0.96)',
-        backdropFilter: 'blur(20px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        borderTop: '0.5px solid rgba(255,255,255,0.07)',
-        display: 'flex',
-        alignItems: 'stretch',
-        padding: '6px 4px 8px',
-        gap: 0
-      }}>
-        {navItems.map(({ path, icon: Icon, label, isCreate, badge }) => {
-          const isActive = path === '/'
-            ? location.pathname === '/'
-            : location.pathname.startsWith(path);
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&display=swap');
 
-          return (
-            <NavLink
-              key={path}
-              to={path}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                textDecoration: 'none',
-                padding: '4px 0',
-                WebkitTapHighlightColor: 'transparent',
-                position: 'relative'
-              }}
-            >
-              <motion.div
-                whileTap={{ scale: 0.82 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-                style={{ position: 'relative' }}
-              >
-                {isCreate ? (
-                  /* ── Create button: gradient pill ── */
-                  <div style={{
-                    width: 48, height: 32,
-                    borderRadius: 12,
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 16px rgba(99,102,241,0.45)'
-                  }}>
-                    <Icon size={20} color="white" strokeWidth={2.5} />
-                  </div>
-                ) : (
-                  /* ── Regular icon ── */
-                  <div style={{
-                    width: 48, height: 32,
-                    borderRadius: 12,
-                    background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background 0.2s'
-                  }}>
-                    <Icon
-                      size={22}
-                      color={isActive ? 'white' : 'rgba(255,255,255,0.38)'}
-                      strokeWidth={isActive ? 2.2 : 1.7}
-                      fill={isActive && path === '/' ? 'white' : 'none'}
-                    />
-                  </div>
-                )}
+        .bnav-root {
+          position: fixed;
+          bottom: 0; left: 0; right: 0;
+          z-index: 1000;
+          display: flex;
+          justify-content: center;
+          padding: 0 0 env(safe-area-inset-bottom, 0px);
+          pointer-events: none;
+        }
 
-                {/* Notification badge */}
-                {badge && (
-                  <div style={{
-                    position: 'absolute', top: 2, right: 6,
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: '#ef4444',
-                    border: '1.5px solid rgba(10,10,12,0.96)'
-                  }} />
-                )}
-              </motion.div>
+        .bnav-bar {
+          pointer-events: auto;
+          width: 100%;
+          max-width: 480px;
+          background: rgba(8, 8, 10, 0.92);
+          backdrop-filter: blur(24px) saturate(160%);
+          -webkit-backdrop-filter: blur(24px) saturate(160%);
+          border-top: 0.5px solid rgba(240, 237, 232, 0.07);
+          display: flex;
+          align-items: stretch;
+          padding: 8px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+        }
 
-              {/* Label */}
-              <span style={{
-                fontSize: 10,
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
-                letterSpacing: '0.3px',
-                transition: 'color 0.2s',
-                lineHeight: 1
-              }}>
-                {label}
-              </span>
+        .bnav-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          text-decoration: none;
+          padding: 4px 0;
+          -webkit-tap-highlight-color: transparent;
+          position: relative;
+        }
 
-              {/* Active dot */}
-              {isActive && !isCreate && (
+        .bnav-icon-wrap {
+          width: 44px;
+          height: 30px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.18s ease;
+          position: relative;
+        }
+
+        .bnav-icon-wrap.active {
+          background: rgba(240, 237, 232, 0.09);
+        }
+
+        .bnav-create {
+          width: 44px;
+          height: 30px;
+          border-radius: 10px;
+          background: #f0ede8;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .bnav-label {
+          font-family: 'Sora', sans-serif;
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.2px;
+          line-height: 1;
+          transition: color 0.18s ease;
+        }
+
+        .bnav-label.active {
+          font-weight: 600;
+          color: #f0ede8;
+        }
+
+        .bnav-label.inactive {
+          color: rgba(240, 237, 232, 0.3);
+        }
+
+        .bnav-badge {
+          position: absolute;
+          top: 2px;
+          right: 6px;
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #ef4444;
+          border: 1.5px solid #08080a;
+        }
+      `}</style>
+
+      <nav className="bnav-root" aria-label="Main navigation">
+        <div className="bnav-bar">
+          {navItems.map(({ path, icon: Icon, label, isCreate, badge }) => {
+            const isActive = path === '/'
+              ? location.pathname === '/'
+              : location.pathname.startsWith(path);
+
+            return (
+              <NavLink key={path} to={path} className="bnav-item">
                 <motion.div
-                  layoutId="nav-dot"
-                  style={{
-                    width: 4, height: 4, borderRadius: '50%',
-                    background: 'white',
-                    position: 'absolute',
-                    bottom: -2
-                  }}
-                  transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
-                />
-              )}
-            </NavLink>
-          );
-        })}
-      </div>
-    </nav>
+                  whileTap={{ scale: 0.80 }}
+                  transition={{ type: 'spring', stiffness: 480, damping: 22 }}
+                  style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+                >
+                  {isCreate ? (
+                    <div className="bnav-create">
+                      <Icon size={17} color="#08080a" strokeWidth={2.5} />
+                    </div>
+                  ) : (
+                    <div className={`bnav-icon-wrap ${isActive ? 'active' : ''}`}>
+                      <Icon
+                        size={20}
+                        color={isActive ? '#f0ede8' : 'rgba(240,237,232,0.32)'}
+                        strokeWidth={isActive ? 2.2 : 1.6}
+                      />
+                    </div>
+                  )}
+
+                  {badge && <div className="bnav-badge" />}
+
+                  <span className={`bnav-label ${isActive ? 'active' : 'inactive'}`}>
+                    {label}
+                  </span>
+
+                  {isActive && !isCreate && (
+                    <motion.div
+                      layoutId="bnav-active-dot"
+                      style={{
+                        width: 3,
+                        height: 3,
+                        borderRadius: '50%',
+                        background: 'rgba(240,237,232,0.5)',
+                        position: 'absolute',
+                        bottom: -6,
+                      }}
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }}
+                    />
+                  )}
+                </motion.div>
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
