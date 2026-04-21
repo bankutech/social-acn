@@ -86,23 +86,28 @@ app.get('/api/health', (req, res) => {
 
 // MongoDB Connection
 const connectDB = async () => {
+    console.log('🔄 Attempting to connect to MongoDB...');
     try {
         const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/acn_plus';
+        if (!process.env.MONGO_URI) {
+            console.warn('⚠️ WARNING: MONGO_URI is not set, falling back to localhost.');
+        }
         await mongoose.connect(uri);
         console.log('✅ MongoDB Connected successfully');
         dbConnected = true;
     } catch (err) {
         console.error('❌ CRITICAL: MongoDB Connection Failed.');
-        console.error('REASON:', err.message);
+        console.error('ERROR MESSAGE:', err.message);
         
         if (err.message.includes('IP address') || err.message.includes('buffering timed out')) {
-            console.error('ACTION REQUIRED: Your IP is likely not whitelisted. Go to MongoDB Atlas -> Network Access and add 0.0.0.0/0.');
+            console.error('👉 ACTION REQUIRED: Your IP is likely not whitelisted. Go to MongoDB Atlas -> Network Access and add 0.0.0.0/0.');
         } else if (err.message.includes('Authentication failed')) {
-            console.error('ACTION REQUIRED: Authentication failed. Please check your password in .env.');
+            console.error('👉 ACTION REQUIRED: Authentication failed. Please check your password in .env.');
         }
         
         dbConnected = false;
         // Attempt to reconnect every 30 seconds
+        console.log('🔄 Will retry connection in 30 seconds...');
         setTimeout(connectDB, 30000);
     }
 };

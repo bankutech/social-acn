@@ -4,11 +4,12 @@
   "description": "ACN+ Social Learning Platform",
   "main": "index.js",
   "scripts": {
-    "start": "node backend/server.js",
+    "postinstall": "cd backend && npm install",
+    "start": "cd backend && node server.js",
     "server": "cd backend && npm start",
     "client": "cd frontend && npm run dev",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "cd frontend && npm run build",
+    "build": "cd backend && npm install && cd ../frontend && npm run build",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
   },
   "keywords": [
