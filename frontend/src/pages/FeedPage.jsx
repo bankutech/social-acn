@@ -16,23 +16,51 @@ export default function FeedPage() {
   const [posts, setPosts] = useState([]);
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     loadFeed();
   }, []);
 
-  const loadFeed = async () => {
+  const loadFeed = async (pageToLoad = 1, append = false) => {
+    if (pageToLoad === 1) setLoading(true);
+    else setLoadingMore(true);
+
     try {
       const [postsData, storiesData] = await Promise.all([
-        api.get('/api/posts/feed'),
-        api.get('/api/stories')
+        api.get(`/api/posts/feed?page=${pageToLoad}&limit=10`),
+        pageToLoad === 1 ? api.get('/api/stories') : Promise.resolve(stories)
       ]);
-      setPosts(postsData);
-      setStories(storiesData);
+      
+      if (append) {
+        setPosts(prev => [...prev, ...postsData]);
+      } else {
+        setPosts(postsData);
+      }
+
+      if (storiesData) setStories(storiesData);
+      
+      // If we got fewer posts than the limit, we're likely at the end
+      if (postsData.length < 10) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
     } catch (err) {
       console.error(err);
     }
     setLoading(false);
+    setLoadingMore(false);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadFeed(nextPage, true);
+    }
   };
 
   return (
@@ -108,6 +136,25 @@ export default function FeedPage() {
               ))
             )}
           </AnimatePresence>
+
+          {/* Infinite Scroll Trigger */}
+          {hasMore && posts.length > 0 && (
+            <div 
+              style={{ padding: '20px 0', display: 'flex', justifyContent: 'center' }}
+              ref={(el) => {
+                if (el && !loadingMore && !loading) {
+                  const observer = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) {
+                      handleLoadMore();
+                    }
+                  }, { threshold: 0.5 });
+                  observer.observe(el);
+                }
+              }}
+            >
+              {loadingMore && <PostSkeleton />}
+            </div>
+          )}
         </div>
       </main>
 

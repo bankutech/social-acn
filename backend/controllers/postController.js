@@ -68,10 +68,15 @@ exports.createPost = async (req, res) => {
 
 exports.getFeed = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
         // Handle demo mode
         if (req.user._id === 'mock_id_123') {
             const store = getDemoStore();
-            return res.json(store.posts);
+            const pagedPosts = store.posts.slice(skip, skip + limit);
+            return res.json(pagedPosts);
         }
 
         const currentUser = await User.findById(req.user.id).populate('following');
@@ -85,7 +90,9 @@ exports.getFeed = async (req, res) => {
         .populate('author', 'name avatarUrl')
         .populate('likes', 'name avatarUrl')
         .populate('comments.author', 'name avatarUrl')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
 
         res.json(posts);
     } catch (error) {
