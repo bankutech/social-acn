@@ -1,7 +1,6 @@
 const PartnerChat = require('../models/PartnerChat');
 const PartnerMessage = require('../models/PartnerMessage');
 const User = require('../models/User');
-const { getSocket, getConnectedUsers } = require('../socket');
 const { sendPushNotification } = require('../utils/push');
 const fs = require('fs');
 const path = require('path');
