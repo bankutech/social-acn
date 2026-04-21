@@ -5,7 +5,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const { cleanupExpiredPartnerMessages } = require('./jobs/partnerCleanup');
 
