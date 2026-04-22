@@ -1,7 +1,5 @@
 # ACN+ - Premium Social Learning Platform
 
-![ACN+ Platform](https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop)
-
 ACN+ is a high-fidelity, interactive social learning platform designed for modern academic collaboration. Built with a focus on rich aesthetics and real-time interaction, it combines the best features of social media with powerful educational tools.
 
 ## 🚀 Features
@@ -67,6 +65,3 @@ ACN+ follows a **Premium Dark Aesthetic**, utilizing:
 ## 🛡 License
 
 This project is open-source and available under the MIT License.
-
----
-Built with ❤️ by the ACN+ Team.
