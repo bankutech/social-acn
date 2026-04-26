@@ -345,7 +345,7 @@ export default function PartnerChatPage() {
                     </div>
                     <div className="pc-context-content">
                         <span className="pc-context-label" style={{ color: t.accent }}>
-                            {replyingTo ? `Replying to ${msg.replyTo?.sender_id?.name || 'Partner'}` : 'Editing message'}
+                            {replyingTo ? `Replying to ${replyingTo.sender_id?.name || 'Partner'}` : 'Editing message'}
                         </span>
                         <p className="pc-context-text">{replyingTo?.content || editingMsg?.content}</p>
                     </div>
