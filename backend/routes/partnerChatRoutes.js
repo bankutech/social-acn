@@ -19,5 +19,7 @@ router.post('/:chatId/message', protect, sendPartnerMessage);
 router.post('/:chatId/upload', protect, setUploadType('partner'), upload.single('image'), uploadPartnerImage);
 router.put('/:chatId/theme', protect, updateTheme);
 router.delete('/:chatId', protect, deletePartnerChat);
+router.put('/message/:messageId', protect, require('../controllers/partnerChatController').editPartnerMessage);
+router.delete('/message/:messageId', protect, require('../controllers/partnerChatController').deletePartnerMessage);
 
 module.exports = router;

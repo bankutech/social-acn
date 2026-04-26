@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import { getSocket } from '../lib/socket';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send, Smile, Camera, X, Palette, Clock, ShieldCheck, MoreVertical } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { ArrowLeft, Send, Smile, Camera, X, Palette, Clock, ShieldCheck, MoreVertical, Reply, Edit2, Trash2 } from 'lucide-react';
 
 const THEMES = {
   purple_dark:  { name: 'Purple dark',  bg: '#130d24', msgBg: '#1e1535', accent: '#7c3aed', inputBg: 'rgba(255,255,255,0.07)' },
@@ -35,10 +35,16 @@ export default function PartnerChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [, forceUpdate] = useState(0);
+
+  // Reply & Edit State
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [editingMsg, setEditingMsg] = useState(null);
+  const [selectedMsgId, setSelectedMsgId] = useState(null);
+
   const messagesEndRef = useRef(null);
   const typingTimeout = useRef(null);
+  const inputRef = useRef(null);
 
-  // Tick every minute so expiry timers stay live
   useEffect(() => {
     const id = setInterval(() => forceUpdate(n => n + 1), 60_000);
     return () => clearInterval(id);
@@ -63,16 +69,29 @@ export default function PartnerChatPage() {
         scrollToBottom();
       }
     });
+
+    socket.on('partner_message_edited', (msg) => {
+        setMessages(prev => prev.map(m => m._id === msg._id ? msg : m));
+    });
+
+    socket.on('partner_message_deleted', (data) => {
+        setMessages(prev => prev.map(m => m._id === data.messageId ? { ...m, isDeleted: true, content: 'This message was deleted', image_url: '' } : m));
+    });
+
     socket.on('partner_user_typing', ({ userId, isTyping }) => {
       if (userId === partnerId) setTyping(isTyping);
     });
-    socket.on('partner_theme_change', ({ theme_name }) => {
-      if (theme_name && THEMES[theme_name]) setTheme(theme_name);
+
+    socket.on('partner_theme_change', (data) => {
+      const tname = data.theme_name || data.theme?.theme_name;
+      if (tname && THEMES[tname]) setTheme(tname);
     });
 
     return () => {
       socket.emit('leave_partner_chat', chat._id);
       socket.off('partner_new_message');
+      socket.off('partner_message_edited');
+      socket.off('partner_message_deleted');
       socket.off('partner_user_typing');
       socket.off('partner_theme_change');
     };
@@ -107,10 +126,8 @@ export default function PartnerChatPage() {
     });
   };
 
-  // Auto-scroll when messages change or typing status updates
   useEffect(() => {
     if (messages.length > 0) {
-      // Small timeout to allow DOM/animations to start
       const timeout = setTimeout(() => scrollToBottom(), 100);
       return () => clearTimeout(timeout);
     }
@@ -118,40 +135,76 @@ export default function PartnerChatPage() {
 
   const handleSend = async () => {
     if ((!input.trim() && !imageFile) || !chat?._id || sending) return;
+    
+    if (inputRef.current) inputRef.current.focus();
+
     setSending(true);
     const content = input;
-    setInput('');
+    const isEditing = !!editingMsg;
+    const currentReplyTo = replyingTo;
+
+    if (!isEditing) setInput('');
+    setReplyingTo(null);
+    setEditingMsg(null);
 
     try {
-      let image_url = '';
-      let cloudinary_public_id = '';
-      if (imageFile) {
-        const fd = new FormData();
-        fd.append('image', imageFile);
-        const up = await api.upload(`/api/partner-chat/${chat._id}/upload`, fd);
-        image_url = up.image_url;
-        cloudinary_public_id = up.cloudinary_public_id;
+      if (isEditing) {
+        const updated = await api.put(`/api/partner-chat/message/${editingMsg._id}`, { content });
+        setMessages(prev => prev.map(m => m._id === editingMsg._id ? updated : m));
+        getSocket().emit('partner_message_edited', { chatId: chat._id, message: updated });
+        setInput('');
+      } else {
+        let image_url = '';
+        let cloudinary_public_id = '';
+        if (imageFile) {
+          const fd = new FormData();
+          fd.append('image', imageFile);
+          const up = await api.upload(`/api/partner-chat/${chat._id}/upload`, fd);
+          image_url = up.image_url;
+          cloudinary_public_id = up.cloudinary_public_id;
+        }
+
+        const msg = await api.post(`/api/partner-chat/${chat._id}/message`, {
+          content,
+          message_type: image_url ? 'image' : 'text',
+          image_url,
+          cloudinary_public_id,
+          replyToId: currentReplyTo?._id
+        });
+
+        setMessages(prev => [...prev, msg]);
+        setImageFile(null);
+        setImagePreview('');
+        setShowImageModal(false);
+
+        getSocket().emit('partner_message', { chatId: chat._id, message: msg });
+        scrollToBottom();
       }
-
-      const msg = await api.post(`/api/partner-chat/${chat._id}/message`, {
-        content,
-        message_type: image_url ? 'image' : 'text',
-        image_url,
-        cloudinary_public_id,
-      });
-
-      setMessages(prev => [...prev, msg]);
-      setImageFile(null);
-      setImagePreview('');
-      setShowImageModal(false);
-
-      getSocket().emit('partner_message', { chatId: chat._id, message: msg });
-      scrollToBottom();
     } catch (err) {
       console.error(err);
-      setInput(content); // restore on failure
+      setInput(content);
     }
     setSending(false);
+  };
+
+  const handleEdit = (msg) => {
+    setEditingMsg(msg);
+    setInput(msg.content);
+    setReplyingTo(null);
+    setSelectedMsgId(null);
+    if (inputRef.current) inputRef.current.focus();
+  };
+
+  const handleDeleteMsg = async (msgId) => {
+    if (!window.confirm('Delete this private message?')) return;
+    try {
+        await api.delete(`/api/partner-chat/message/${msgId}`);
+        setMessages(prev => prev.map(m => m._id === msgId ? { ...m, isDeleted: true, content: 'This message was deleted', image_url: '' } : m));
+        getSocket().emit('partner_message_deleted', { chatId: chat._id, messageId: msgId });
+        setSelectedMsgId(null);
+    } catch (e) {
+        console.error(e);
+    }
   };
 
   const handleTyping = () => {
@@ -199,734 +252,287 @@ export default function PartnerChatPage() {
   const formatTime = (date) =>
     new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const handleDeleteChat = async () => {
-    if (!chat?._id || !window.confirm('Are you sure you want to delete this partner chat?')) return;
-    try {
-      await api.delete(`/api/partner-chat/${chat._id}`);
-      navigate('/chat');
-    } catch {}
-  };
-
   const t = THEMES[theme] || THEMES.purple_dark;
 
   return (
-    <>
-      <div
-        className="pc-page"
-        style={{ background: t.bg }}
-        role="main"
-        aria-label="Partner chat"
-      >
-        {/* ── Header ── */}
-        <header className="pc-header">
-          <button
-            className="pc-icon-btn"
-            onClick={() => navigate('/chat')}
-            aria-label="Back to chats"
-          >
-            <ArrowLeft size={18} />
-          </button>
+    <div className="pc-page" style={{ background: t.bg }}>
+      <header className="pc-header">
+        <button className="pc-icon-btn" onClick={() => navigate('/chat')}>
+          <ArrowLeft size={18} />
+        </button>
 
-          <div
-            className="pc-header-info"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate(`/profile/${partnerId}`)}
-            onKeyDown={e => e.key === 'Enter' && navigate(`/profile/${partnerId}`)}
-            aria-label={`View ${partner?.name}'s profile`}
-          >
-            <Avatar src={partner?.avatarUrl} name={partner?.name} size={38} />
-            <div className="pc-header-text">
-              <div className="pc-header-name">
-                {partner?.name || 'Partner'}
-                <span className="pc-private-badge">
-                  <ShieldCheck size={10} />
-                  Private
-                </span>
-              </div>
-              <div
-                className="pc-header-sub"
-                style={{ color: typing ? '#4ade80' : 'rgba(255,255,255,0.4)' }}
-                aria-live="polite"
-              >
-                {typing ? 'typing...' : 'Partner chat'}
-              </div>
+        <div className="pc-header-info" onClick={() => navigate(`/profile/${partnerId}`)}>
+          <Avatar src={partner?.avatarUrl} name={partner?.name} size={38} />
+          <div className="pc-header-text">
+            <div className="pc-header-name">
+              {partner?.name || 'Partner'}
+              <span className="pc-private-badge"><ShieldCheck size={10} /> Private</span>
+            </div>
+            <div className="pc-header-sub" style={{ color: typing ? '#4ade80' : 'rgba(255,255,255,0.4)' }}>
+              {typing ? 'typing...' : 'Partner chat'}
             </div>
           </div>
-
-          <button
-            className="pc-icon-btn"
-            style={{ color: t.accent }}
-            onClick={() => setShowThemePicker(true)}
-            aria-label="Change chat theme"
-          >
-            <Palette size={18} />
-          </button>
-
-          <div style={{ position: 'relative' }}>
-            <button
-              className="pc-icon-btn"
-              onClick={() => setShowMenu(!showMenu)}
-              aria-label="More options"
-            >
-              <MoreVertical size={18} />
-            </button>
-            {showMenu && (
-              <div className="pc-menu-dropdown">
-                <button onClick={handleDeleteChat} className="pc-menu-item" style={{ color: '#ef4444' }}>
-                  Delete Chat
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-
-        {/* ── Privacy bar ── */}
-        <div className="pc-notice" role="note">
-          <ShieldCheck size={12} />
-          Messages auto-delete after 24 hours · only you and {partner?.name?.split(' ')[0] || 'your partner'} can see this
         </div>
 
-        {/* ── Messages ── */}
-        <div
-          className="pc-messages"
-          role="log"
-          aria-live="polite"
-          aria-label="Messages"
-        >
-          {loading && (
-            <div className="pc-loader" role="status" aria-label="Loading messages">
-              <div className="pc-spinner" style={{ borderTopColor: t.accent }} />
+        <button className="pc-icon-btn" style={{ color: t.accent }} onClick={() => setShowThemePicker(true)}>
+          <Palette size={18} />
+        </button>
+
+        <div style={{ position: 'relative' }}>
+          <button className="pc-icon-btn" onClick={() => setShowMenu(!showMenu)}>
+            <MoreVertical size={18} />
+          </button>
+          {showMenu && (
+            <div className="pc-menu-dropdown">
+              <button onClick={async () => {
+                if (window.confirm('Delete this partner chat?')) {
+                  await api.delete(`/api/partner-chat/${chat._id}`);
+                  navigate('/chat');
+                }
+              }} className="pc-menu-item" style={{ color: '#ef4444' }}>
+                Delete Chat
+              </button>
             </div>
           )}
+        </div>
+      </header>
 
-          {!loading && messages.length === 0 && (
-            <div className="pc-empty" aria-label="No messages yet">
-              <div className="pc-empty-icon" style={{ color: t.accent }}>
-                <ShieldCheck size={36} />
-              </div>
-              <p className="pc-empty-title">Start your private conversation</p>
-              <p className="pc-empty-sub">Messages disappear after 24 hours</p>
-            </div>
-          )}
+      <div className="pc-notice">
+        <ShieldCheck size={12} />
+        Messages auto-delete after 24 hours · only you and {partner?.name?.split(' ')[0] || 'partner'} can see this
+      </div>
 
-          {messages.map((msg, i) => {
-            const isMine = String(msg.sender_id?._id || msg.sender_id) === String(user?._id);
-            return (
-              <motion.div
+      <div className="pc-messages">
+        {loading && <div className="pc-loader"><div className="pc-spinner" style={{ borderTopColor: t.accent }} /></div>}
+        
+        {messages.map((msg, i) => {
+          const isMine = String(msg.sender_id?._id || msg.sender_id) === String(user?._id);
+          const isSelected = selectedMsgId === msg._id;
+          
+          return (
+            <PartnerBubble 
                 key={msg._id || i}
-                className={`pc-bubble-row ${isMine ? 'mine' : 'theirs'}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <div
-                  className={`pc-bubble ${isMine ? 'pc-mine' : 'pc-theirs'}`}
-                  style={{
-                    background: isMine ? t.accent : t.msgBg,
-                    color: '#fff',
-                  }}
-                >
-                  {msg.message_type === 'image' && msg.image_url && (
-                    <button
-                      className="pc-img-btn"
-                      onClick={() => window.open(api.getFileUrl(msg.image_url), '_blank')}
-                      aria-label="Open image in new tab"
-                    >
-                      <img
-                        src={api.getFileUrl(msg.image_url)}
-                        alt="Shared image"
-                        className="pc-msg-img"
-                      />
-                    </button>
-                  )}
-                  {msg.content && <p className="pc-bubble-text">{msg.content}</p>}
-                  <div className="pc-bubble-meta">
-                    <time dateTime={msg.created_at}>{formatTime(msg.created_at)}</time>
-                    {msg.expires_at && (
-                      <span className="pc-timer" aria-label="Expires in">
-                        <Clock size={10} />
-                        {getTimeRemaining(msg.expires_at)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-
-          {typing && (
-            <div className="pc-bubble-row theirs" aria-label="Partner is typing">
-              <div className="pc-bubble pc-theirs pc-typing" style={{ background: t.msgBg }}>
-                <span /><span /><span />
-              </div>
+                msg={msg}
+                isMine={isMine}
+                isSelected={isSelected}
+                theme={t}
+                onSelect={() => setSelectedMsgId(isSelected ? null : msg._id)}
+                onReply={() => { setReplyingTo(msg); setEditingMsg(null); if (inputRef.current) inputRef.current.focus(); }}
+                onEdit={() => handleEdit(msg)}
+                onDelete={() => handleDeleteMsg(msg._id)}
+                formatTime={formatTime}
+                getTimeRemaining={getTimeRemaining}
+            />
+          );
+        })}
+        
+        {typing && (
+          <div className="pc-bubble-row theirs">
+            <div className="pc-bubble pc-theirs pc-typing" style={{ background: t.msgBg }}>
+              <span /><span /><span />
             </div>
-          )}
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
 
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* ── Emoji panel ── */}
+      <div className="pc-footer">
         <AnimatePresence>
-          {showEmoji && (
-            <motion.div
-              className="pc-emoji-panel"
-              initial={{ y: 16, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 16, opacity: 0 }}
-              role="region"
-              aria-label="Emoji picker"
-            >
-              {EMOJIS.map(e => (
-                <button
-                  key={e}
-                  className="pc-emoji-btn"
-                  onClick={() => { setInput(prev => prev + e); setShowEmoji(false); }}
-                  aria-label={`Insert ${e}`}
-                >
-                  {e}
-                </button>
-              ))}
-            </motion.div>
-          )}
+            {(replyingTo || editingMsg) && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="pc-context-preview">
+                    <div className="pc-context-icon" style={{ color: t.accent }}>
+                        {replyingTo ? <Reply size={14} /> : <Edit2 size={14} />}
+                    </div>
+                    <div className="pc-context-content">
+                        <span className="pc-context-label" style={{ color: t.accent }}>
+                            {replyingTo ? `Replying to ${msg.replyTo?.sender_id?.name || 'Partner'}` : 'Editing message'}
+                        </span>
+                        <p className="pc-context-text">{replyingTo?.content || editingMsg?.content}</p>
+                    </div>
+                    <button className="pc-context-close" onClick={() => { setReplyingTo(null); setEditingMsg(null); if (!editingMsg) setInput(''); }}>
+                        <X size={16} />
+                    </button>
+                </motion.div>
+            )}
         </AnimatePresence>
 
-        {/* ── Input ── */}
-        <div className="pc-input-bar" role="form" aria-label="Message input">
+        <div className="pc-input-bar">
           <div className="pc-input-actions">
-            <button
-              className="pc-icon-btn"
-              style={{ color: t.accent }}
-              onClick={() => setShowEmoji(v => !v)}
-              aria-label="Toggle emoji picker"
-              aria-expanded={showEmoji}
-            >
-              <Smile size={18} />
-            </button>
-            <label className="pc-icon-btn" style={{ color: t.accent, cursor: 'pointer' }} aria-label="Attach image">
-              <Camera size={18} />
+            <button className="pc-icon-btn-simple" onClick={() => setShowEmoji(v => !v)}><Smile size={20} /></button>
+            <label className="pc-icon-btn-simple">
+              <Camera size={20} />
               <input type="file" accept="image/*" hidden onChange={handleImageSelect} />
             </label>
           </div>
 
-          <input
-            className="pc-input"
+          <textarea
+            ref={inputRef}
+            className="pc-input-v2"
             style={{ background: t.inputBg }}
             placeholder="Type a message…"
             value={input}
-            onChange={e => { setInput(e.target.value); handleTyping(); }}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-            aria-label="Message"
-            autoComplete="off"
+            rows={1}
+            onChange={e => { 
+                setInput(e.target.value); 
+                handleTyping();
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+            }}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
           />
 
-          <button
-            className="pc-send-btn"
-            style={{ background: t.accent }}
-            onClick={handleSend}
-            disabled={(!input.trim() && !imageFile) || sending}
-            aria-label="Send message"
-          >
-            <Send size={16} />
+          <button className="pc-send-btn" style={{ background: t.accent }} onClick={handleSend} disabled={(!input.trim() && !imageFile) || sending}>
+            <Send size={18} />
           </button>
         </div>
 
-        {/* ── Image send modal ── */}
         <AnimatePresence>
-          {showImageModal && imagePreview && (
-            <motion.div
-              className="pc-modal-wrap"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={clearImage}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Send image"
-            >
-              <motion.div
-                className="pc-modal"
-                initial={{ scale: 0.93, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.93, opacity: 0 }}
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="pc-modal-header">
-                  <span className="pc-modal-title">Send image</span>
-                  <button className="pc-icon-btn-sm" onClick={clearImage} aria-label="Cancel">
-                    <X size={16} />
-                  </button>
-                </div>
-                <img src={imagePreview} alt="Preview" className="pc-modal-img" />
-                <input
-                  placeholder="Add a caption…"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSend()}
-                  aria-label="Caption"
-                  className="pc-modal-input"
-                />
-                <button
-                  className="pc-modal-send"
-                  style={{ background: t.accent }}
-                  onClick={handleSend}
-                  disabled={sending}
-                >
-                  {sending ? 'Sending…' : 'Send image'}
-                </button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── Theme picker ── */}
-        <AnimatePresence>
-          {showThemePicker && (
-            <motion.div
-              className="pc-modal-wrap"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowThemePicker(false)}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Choose theme"
-            >
-              <motion.div
-                className="pc-modal"
-                initial={{ scale: 0.93, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.93, opacity: 0 }}
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="pc-modal-header">
-                  <span className="pc-modal-title">Chat theme</span>
-                  <button className="pc-icon-btn-sm" onClick={() => setShowThemePicker(false)} aria-label="Close">
-                    <X size={16} />
-                  </button>
-                </div>
-                <div className="pc-theme-grid">
-                  {Object.entries(THEMES).map(([key, th]) => (
-                    <button
-                      key={key}
-                      className={`pc-theme-opt ${theme === key ? 'active' : ''}`}
-                      style={{ background: th.bg, borderColor: theme === key ? th.accent : 'rgba(255,255,255,0.1)' }}
-                      onClick={() => handleThemeChange(key)}
-                      aria-pressed={theme === key}
-                      aria-label={`Select ${th.name} theme`}
-                    >
-                      <div className="pc-theme-swatch" style={{ background: th.accent }} />
-                      <span className="pc-theme-name">{th.name}</span>
-                      {theme === key && (
-                        <div className="pc-theme-check" style={{ background: th.accent }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
+            {showEmoji && (
+                <motion.div className="pc-emoji-grid" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
+                    {EMOJIS.map(e => <button key={e} onClick={() => { setInput(p => p+e); setShowEmoji(false); }} className="pc-emoji-item">{e}</button>)}
+                </motion.div>
+            )}
         </AnimatePresence>
       </div>
 
+      {/* Modals & Picker */}
+      <AnimatePresence>
+        {showImageModal && imagePreview && (
+          <motion.div className="pc-modal-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={clearImage}>
+            <motion.div className="pc-modal" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onClick={e => e.stopPropagation()}>
+              <img src={imagePreview} alt="Preview" className="pc-modal-img" />
+              <div className="pc-modal-footer">
+                  <input placeholder="Add a caption…" value={input} onChange={e => setInput(e.target.value)} className="pc-modal-input" />
+                  <button className="pc-modal-send" style={{ background: t.accent }} onClick={handleSend}>{sending ? '...' : 'Send'}</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showThemePicker && (
+          <motion.div className="pc-modal-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowThemePicker(false)}>
+            <motion.div className="pc-modal" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onClick={e => e.stopPropagation()}>
+                <h3 className="pc-modal-title">Choose Theme</h3>
+                <div className="pc-theme-grid">
+                  {Object.entries(THEMES).map(([key, th]) => (
+                    <button key={key} className={`pc-theme-opt ${theme === key ? 'active' : ''}`} style={{ background: th.bg }} onClick={() => handleThemeChange(key)}>
+                      <div className="pc-theme-swatch" style={{ background: th.accent }} />
+                      <span>{th.name}</span>
+                    </button>
+                  ))}
+                </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style>{`
-        .pc-page {
-          height: 100dvh;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          position: relative;
-        }
-
-        /* ── Header ── */
-        .pc-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px 14px;
-          background: rgba(0,0,0,0.45);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border-bottom: 1px solid rgba(255,255,255,0.07);
-          flex-shrink: 0;
-          z-index: 10;
-        }
-        .pc-icon-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.12);
-          background: rgba(255,255,255,0.06);
-          color: rgba(255,255,255,0.7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          flex-shrink: 0;
-          transition: background 0.15s;
-        }
-        .pc-icon-btn:hover { background: rgba(255,255,255,0.1); }
-        .pc-header-info {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          cursor: pointer;
-          min-width: 0;
-        }
-        .pc-header-text { display: flex; flex-direction: column; min-width: 0; }
-        .pc-header-name {
-          font-size: 15px;
-          font-weight: 600;
-          color: #fff;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .pc-private-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 3px;
-          font-size: 10px;
-          font-weight: 400;
-          background: rgba(124,58,237,0.25);
-          color: #c4b5fd;
-          padding: 2px 7px;
-          border-radius: 20px;
-          white-space: nowrap;
-          flex-shrink: 0;
-        }
-        .pc-header-sub {
-          font-size: 11px;
-          margin-top: 1px;
-          transition: color 0.2s;
-        }
-
-        .pc-menu-dropdown {
-          position: absolute;
-          top: 100%;
-          right: 0;
-          margin-top: 8px;
-          background: rgba(20,20,20,0.95);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 8px;
-          padding: 4px;
-          min-width: 140px;
-          z-index: 50;
-        }
-        .pc-menu-item {
-          width: 100%;
-          text-align: left;
-          padding: 8px 12px;
-          background: none;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 14px;
-          color: #fff;
-        }
-        .pc-menu-item:hover {
-          background: rgba(255,255,255,0.1);
-        }
-
-        /* ── Privacy bar ── */
-        .pc-notice {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 7px 14px;
-          background: rgba(124,58,237,0.1);
-          border-bottom: 1px solid rgba(124,58,237,0.15);
-          font-size: 11px;
-          color: #c4b5fd;
-          flex-shrink: 0;
-        }
-
-        /* ── Messages ── */
-        .pc-messages {
-          flex: 1;
-          overflow-y: auto;
-          padding: 14px 12px;
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-          overscroll-behavior: contain;
-        }
-        .pc-loader {
-          display: flex;
-          justify-content: center;
-          padding: 48px 0;
-        }
-        .pc-spinner {
-          width: 24px;
-          height: 24px;
-          border: 2px solid rgba(255,255,255,0.12);
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .pc-empty {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          text-align: center;
-          opacity: 0.65;
-        }
-        .pc-empty-title { font-size: 15px; color: rgba(255,255,255,0.8); }
-        .pc-empty-sub   { font-size: 13px; color: rgba(255,255,255,0.4); }
-
-        /* ── Bubbles ── */
-        .pc-bubble-row { display: flex; }
-        .pc-bubble-row.mine   { justify-content: flex-end; }
-        .pc-bubble-row.theirs { justify-content: flex-start; }
-        .pc-bubble {
-          max-width: 74%;
-          padding: 9px 13px;
-          border-radius: 18px;
-          font-size: 14px;
-          line-height: 1.45;
-        }
-        .pc-mine   { border-bottom-right-radius: 4px; }
+        .pc-page { height: 100dvh; display: flex; flex-direction: column; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .pc-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(0,0,0,0.3); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .pc-icon-btn { background: none; border: none; color: rgba(255,255,255,0.7); padding: 8px; cursor: pointer; }
+        .pc-header-info { flex: 1; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .pc-header-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+        .pc-private-badge { background: rgba(124,58,237,0.3); color: #c4b5fd; font-size: 10px; padding: 2px 8px; border-radius: 12px; display: flex; align-items: center; gap: 4px; }
+        .pc-header-sub { font-size: 11px; margin-top: 2px; }
+        .pc-notice { background: rgba(124,58,237,0.1); padding: 8px 16px; font-size: 11px; color: #c4b5fd; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        
+        .pc-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .pc-bubble-row { display: flex; flex-direction: column; width: 100%; position: relative; }
+        .pc-bubble-row.mine { align-items: flex-end; }
+        .pc-bubble-row.theirs { align-items: flex-start; }
+        .pc-bubble { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; position: relative; cursor: pointer; }
+        .pc-mine { border-bottom-right-radius: 4px; }
         .pc-theirs { border-bottom-left-radius: 4px; }
-        .pc-bubble-text { margin: 0; }
-        .pc-bubble-meta {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 4px;
-          font-size: 10px;
-          opacity: 0.55;
-        }
-        .pc-timer {
-          display: flex;
-          align-items: center;
-          gap: 3px;
-          color: #fbbf24;
-          opacity: 1;
-        }
-
-        /* Typing dots */
-        .pc-typing {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          padding: 12px 16px;
-        }
-        .pc-typing span {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.4);
-          display: block;
-          animation: bounce 1.2s ease-in-out infinite;
-        }
+        .pc-bubble.deleted { opacity: 0.5; font-style: italic; }
+        .pc-bubble-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 10px; opacity: 0.5; justify-content: flex-end; }
+        .pc-timer { display: flex; align-items: center; gap: 4px; color: #fbbf24; }
+        
+        .pc-footer { padding: 12px 16px 30px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); }
+        .pc-input-bar { display: flex; align-items: flex-end; gap: 10px; }
+        .pc-input-actions { display: flex; gap: 4px; padding-bottom: 6px; }
+        .pc-icon-btn-simple { background: none; border: none; color: rgba(255,255,255,0.5); padding: 8px; cursor: pointer; }
+        .pc-input-v2 { flex: 1; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 10px 16px; color: white; font-size: 14px; outline: none; resize: none; max-height: 120px; line-height: 1.4; }
+        .pc-send-btn { width: 42px; height: 42px; border-radius: 50%; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        
+        .pc-context-preview { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 12px; margin-bottom: 12px; }
+        .pc-context-content { flex: 1; min-width: 0; }
+        .pc-context-label { font-size: 11px; font-weight: 700; display: block; margin-bottom: 2px; }
+        .pc-context-text { font-size: 12px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .pc-reply-bubble { background: rgba(0,0,0,0.2); border-left: 3px solid rgba(255,255,255,0.3); padding: 6px 10px; border-radius: 8px; margin-bottom: 6px; font-size: 12px; opacity: 0.8; }
+        .pc-msg-actions { display: flex; gap: 8px; margin-top: 4px; background: #222; padding: 4px 12px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .pc-action-btn { background: none; border: none; color: white; padding: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+        
+        .pc-modal-wrap { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .pc-modal { background: #1a1a1a; border-radius: 24px; padding: 20px; width: 100%; max-width: 400px; border: 1px solid rgba(255,255,255,0.1); }
+        .pc-modal-img { width: 100%; border-radius: 16px; margin-bottom: 16px; max-height: 300px; object-fit: cover; }
+        .pc-modal-input { width: 100%; background: #222; border: none; padding: 12px; border-radius: 12px; color: white; margin-bottom: 16px; }
+        .pc-modal-send { width: 100%; padding: 12px; border-radius: 12px; border: none; color: white; font-weight: 700; }
+        .pc-theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        .pc-theme-opt { padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+        .pc-theme-swatch { width: 30px; height: 30px; border-radius: 50%; }
+        
+        .pc-typing span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); display: block; animation: bounce 1.2s infinite; }
         .pc-typing span:nth-child(2) { animation-delay: 0.2s; }
         .pc-typing span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce {
-          0%,60%,100% { transform: translateY(0); }
-          30% { transform: translateY(-5px); }
-        }
-
-        /* ── Media ── */
-        .pc-img-btn { background: none; border: none; padding: 0; cursor: pointer; display: block; }
-        .pc-msg-img {
-          display: block;
-          width: 100%;
-          max-width: 240px;
-          border-radius: 12px;
-          margin-bottom: 5px;
-          object-fit: cover;
-          transition: opacity 0.15s;
-        }
-        .pc-img-btn:hover .pc-msg-img { opacity: 0.85; }
-
-        /* ── Emoji panel ── */
-        .pc-emoji-panel {
-          padding: 10px 12px;
-          background: rgba(0,0,0,0.5);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border-top: 1px solid rgba(255,255,255,0.07);
-          display: flex;
-          flex-wrap: wrap;
-          gap: 2px;
-          flex-shrink: 0;
-        }
-        .pc-emoji-btn {
-          font-size: 22px;
-          padding: 5px 6px;
-          border-radius: 8px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          line-height: 1;
-          transition: background 0.12s;
-        }
-        .pc-emoji-btn:hover { background: rgba(255,255,255,0.1); }
-
-        /* ── Input bar ── */
-        .pc-input-bar {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 10px 12px;
-          background: rgba(0,0,0,0.45);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border-top: 1px solid rgba(255,255,255,0.07);
-          flex-shrink: 0;
-        }
-        .pc-input-actions { display: flex; align-items: center; gap: 2px; }
-        .pc-input {
-          flex: 1;
-          height: 40px;
-          border-radius: 20px;
-          padding: 0 16px;
-          border: 1px solid rgba(255,255,255,0.1);
-          color: #fff;
-          font-size: 14px;
-          outline: none;
-          transition: border-color 0.15s;
-        }
-        .pc-input::placeholder { color: rgba(255,255,255,0.3); }
-        .pc-input:focus { border-color: rgba(255,255,255,0.25); }
-        .pc-send-btn {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          border: none;
-          color: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          flex-shrink: 0;
-          transition: opacity 0.15s, transform 0.1s;
-        }
-        .pc-send-btn:hover:not(:disabled) { opacity: 0.88; }
-        .pc-send-btn:active:not(:disabled) { transform: scale(0.93); }
-        .pc-send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        /* ── Modals ── */
-        .pc-modal-wrap {
-          position: absolute;
-          inset: 0;
-          background: rgba(0,0,0,0.7);
-          display: flex;
-          align-items: flex-end;
-          z-index: 50;
-        }
-        .pc-modal {
-          width: 100%;
-          background: var(--bg-secondary, #1a1a1a);
-          border-radius: 20px 20px 0 0;
-          padding: 20px 16px 32px;
-        }
-        .pc-modal-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 14px;
-        }
-        .pc-modal-title {
-          font-size: 15px;
-          font-weight: 600;
-          color: var(--text-primary, #fff);
-        }
-        .pc-icon-btn-sm {
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.15);
-          background: rgba(255,255,255,0.06);
-          color: rgba(255,255,255,0.7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-        }
-        .pc-modal-img {
-          width: 100%;
-          border-radius: 12px;
-          max-height: 280px;
-          object-fit: cover;
-          display: block;
-        }
-        .pc-modal-input {
-          width: 100%;
-          margin-top: 12px;
-          height: 40px;
-          border-radius: 20px;
-          padding: 0 16px;
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(255,255,255,0.12);
-          color: #fff;
-          font-size: 14px;
-          outline: none;
-        }
-        .pc-modal-input::placeholder { color: rgba(255,255,255,0.35); }
-        .pc-modal-send {
-          width: 100%;
-          margin-top: 12px;
-          height: 44px;
-          border-radius: 22px;
-          border: none;
-          color: #fff;
-          font-size: 15px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: opacity 0.15s;
-        }
-        .pc-modal-send:disabled { opacity: 0.4; }
-
-        /* ── Theme picker ── */
-        .pc-theme-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-        .pc-theme-opt {
-          padding: 18px 14px;
-          border-radius: 14px;
-          border: 2px solid transparent;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          position: relative;
-          transition: border-color 0.18s;
-        }
-        .pc-theme-swatch {
-          width: 36px;
-          height: 20px;
-          border-radius: 10px;
-        }
-        .pc-theme-name {
-          font-size: 12px;
-          color: rgba(255,255,255,0.8);
-          font-weight: 500;
-        }
-        .pc-theme-check {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
       `}</style>
-    </>
+    </div>
+  );
+}
+
+function PartnerBubble({ msg, isMine, isSelected, theme, onSelect, onReply, onEdit, onDelete, formatTime, getTimeRemaining }) {
+  const x = useMotionValue(0);
+  const opacity = useTransform(x, [0, 60], [0, 1]);
+  const scale = useTransform(x, [0, 60], [0.8, 1]);
+
+  return (
+    <div className={`pc-bubble-row ${isMine ? 'mine' : 'theirs'}`}>
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: 80 }}
+        onDragEnd={(e, info) => info.offset.x > 50 && onReply()}
+        style={{ x }}
+        className={`pc-bubble ${isMine ? 'pc-mine' : 'pc-theirs'} ${msg.isDeleted ? 'deleted' : ''}`}
+        style={{ background: isMine ? theme.accent : theme.msgBg, x }}
+        onClick={onSelect}
+      >
+        <motion.div style={{ position: 'absolute', left: -40, top: '50%', y: '-50%', opacity, scale }}>
+            <Reply size={18} color={theme.accent} />
+        </motion.div>
+
+        {msg.replyTo && !msg.isDeleted && (
+            <div className="pc-reply-bubble">
+                <span style={{ fontWeight: 700, fontSize: 10, display: 'block', marginBottom: 2 }}>
+                    {msg.replyTo.sender_id?.name || 'Partner'}
+                </span>
+                <span style={{ opacity: 0.7 }}>{msg.replyTo.content}</span>
+            </div>
+        )}
+
+        {msg.message_type === 'image' && msg.image_url && !msg.isDeleted && (
+          <img src={api.getFileUrl(msg.image_url)} className="pc-msg-img" alt="" onClick={() => window.open(api.getFileUrl(msg.image_url), '_blank')} />
+        )}
+        
+        <p className="pc-bubble-text">{msg.content}</p>
+        
+        <div className="pc-bubble-meta">
+          {msg.isEdited && <span>edited</span>}
+          <span>{formatTime(msg.created_at)}</span>
+          {msg.expires_at && <span className="pc-timer"><Clock size={10} />{getTimeRemaining(msg.expires_at)}</span>}
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {isSelected && !msg.isDeleted && (
+          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} className="pc-msg-actions">
+            <button className="pc-action-btn" onClick={onReply}><Reply size={14} /> Reply</button>
+            {isMine && <button className="pc-action-btn" onClick={onEdit}><Edit2 size={14} /> Edit</button>}
+            {isMine && <button className="pc-action-btn" style={{ color: '#ef4444' }} onClick={onDelete}><Trash2 size={14} /> Delete</button>}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

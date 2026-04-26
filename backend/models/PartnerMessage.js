@@ -7,6 +7,9 @@ const PartnerMessageSchema = new mongoose.Schema({
     content: { type: String, default: '' },
     image_url: { type: String, default: '' },
     cloudinary_public_id: { type: String, default: '' },
+    replyTo: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerMessage' },
+    isEdited: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
     created_at: { type: Date, default: Date.now },
     expires_at: { type: Date, required: true }
 });

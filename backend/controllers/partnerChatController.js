@@ -101,6 +101,10 @@ exports.getPartnerMessages = async (req, res) => {
             expires_at: { $gt: new Date() }
         })
         .populate('sender_id', 'name avatarUrl')
+        .populate({
+            path: 'replyTo',
+            populate: { path: 'sender_id', select: 'name' }
+        })
         .sort({ created_at: 1 });
 
         res.json(messages);
@@ -113,7 +117,7 @@ exports.getPartnerMessages = async (req, res) => {
 exports.sendPartnerMessage = async (req, res) => {
     try {
     const { chatId } = req.params;
-    const { content, message_type, image_url, cloudinary_public_id } = req.body;
+    const { content, message_type, image_url, cloudinary_public_id, replyToId } = req.body;
     const userId = req.user._id || req.user.id;
 
         if (String(chatId).startsWith('demo_partner_') || !isValidObjectId(userId)) {
@@ -153,12 +157,17 @@ exports.sendPartnerMessage = async (req, res) => {
             content: content || '',
             image_url: image_url || '',
             cloudinary_public_id: cloudinary_public_id || '',
+            replyTo: replyToId || null,
             created_at: now,
             expires_at: chat.expires_enabled ? expiresAt : new Date('9999-12-31')
         });
 
         const populated = await PartnerMessage.findById(message._id)
-            .populate('sender_id', 'name avatarUrl');
+            .populate('sender_id', 'name avatarUrl')
+            .populate({
+                path: 'replyTo',
+                populate: { path: 'sender_id', select: 'name' }
+            });
 
         // Emit via Socket.io
         const io = req.app.get('io');
@@ -317,6 +326,57 @@ exports.deletePartnerChat = async (req, res) => {
         await PartnerMessage.deleteMany({ chat_id: req.params.chatId });
 
         res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.editPartnerMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { content } = req.body;
+        const userId = req.user._id || req.user.id;
+
+        const message = await PartnerMessage.findById(messageId);
+        if (!message) return res.status(404).json({ message: 'Message not found' });
+        if (message.sender_id.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'Unauthorized' });
+        }
+
+        message.content = content;
+        message.isEdited = true;
+        await message.save();
+
+        const populated = await PartnerMessage.findById(message._id)
+            .populate('sender_id', 'name avatarUrl')
+            .populate({
+                path: 'replyTo',
+                populate: { path: 'sender_id', select: 'name' }
+            });
+
+        res.json(populated);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.deletePartnerMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user._id || req.user.id;
+
+        const message = await PartnerMessage.findById(messageId);
+        if (!message) return res.status(404).json({ message: 'Message not found' });
+        if (message.sender_id.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'Unauthorized' });
+        }
+
+        message.isDeleted = true;
+        message.content = 'This message was deleted';
+        message.image_url = '';
+        await message.save();
+
+        res.json({ success: true, messageId });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

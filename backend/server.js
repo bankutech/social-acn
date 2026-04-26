@@ -160,10 +160,20 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Handle partner messages
+    // Partner Chat Events
     socket.on('partner_message', (data) => {
         const { chatId, message } = data;
         socket.to(`partner_${chatId}`).emit('partner_new_message', message);
+    });
+
+    socket.on('partner_message_edited', (data) => {
+        const { chatId, message } = data;
+        socket.to(`partner_${chatId}`).emit('partner_message_edited', message);
+    });
+
+    socket.on('partner_message_deleted', (data) => {
+        const { chatId, messageId } = data;
+        socket.to(`partner_${chatId}`).emit('partner_message_deleted', { messageId });
     });
 
     // Handle typing indicators

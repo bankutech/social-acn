@@ -68,7 +68,11 @@ exports.getChat = async (req, res) => {
             participants: { $all: [userId, req.params.userId] }
         })
         .populate('participants', 'name avatarUrl')
-        .populate('messages.sender', 'name avatarUrl');
+        .populate('messages.sender', 'name avatarUrl')
+        .populate({
+            path: 'messages.replyTo',
+            populate: { path: 'sender', select: 'name' }
+        });
 
         if (!chat) {
             // Create new chat if it doesn't exist
@@ -78,7 +82,11 @@ exports.getChat = async (req, res) => {
             
             const populatedChat = await Chat.findById(newChat._id)
                 .populate('participants', 'name avatarUrl')
-                .populate('messages.sender', 'name avatarUrl');
+                .populate('messages.sender', 'name avatarUrl')
+                .populate({
+                    path: 'messages.replyTo',
+                    populate: { path: 'sender', select: 'name' }
+                });
             
             return res.json(populatedChat);
         }
@@ -115,6 +123,23 @@ exports.sendMessage = async (req, res) => {
             content: content || '',
             mediaUrl: mediaUrl || '',
             replyTo: replyToId || null,
+        };
+
+        chat.messages.push(message);
+        chat.lastMessage = content || (normalizedType === 'image' ? 'Sent an image' : 'Sent a file');
+        chat.lastMessageTime = new Date();
+        await chat.save();
+
+        // Populate to return full object
+        const savedChat = await Chat.findById(chat._id)
+            .populate('messages.sender', 'name avatarUrl')
+            .populate({
+                path: 'messages.replyTo',
+                populate: { path: 'sender', select: 'name' }
+            });
+        
+        const newMessage = savedChat.messages[savedChat.messages.length - 1];
+
         // Send Push Notification
         const sender = await User.findById(req.user.id);
         const recipientStrId = chat.participants.find(p => p.toString() !== req.user.id);
@@ -153,7 +178,10 @@ exports.editMessage = async (req, res) => {
 
         const updatedMessage = await Chat.findById(chat._id)
             .populate('messages.sender', 'name avatarUrl')
-            .populate('messages.replyTo')
+            .populate({
+                path: 'messages.replyTo',
+                populate: { path: 'sender', select: 'name' }
+            })
             .then(c => c.messages.id(messageId));
 
         res.json(updatedMessage);
