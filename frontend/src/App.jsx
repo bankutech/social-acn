@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import FeedPage from './pages/FeedPage';
 import ExplorePage from './pages/ExplorePage';
@@ -24,7 +23,6 @@ function AppContent() {
   const { user } = useAuth();
   return (
     <div className="app-container">
-      {user && <Navbar />}
       <main className={user ? 'main-content has-nav' : 'main-content'}>
         <Routes>
           <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
