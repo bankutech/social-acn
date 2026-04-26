@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import BottomNav from './components/BottomNav';
 import FeedPage from './pages/FeedPage';
 import ExplorePage from './pages/ExplorePage';
@@ -19,7 +19,7 @@ function PrivateRoute({ children }) {
   return user ? children : <Navigate to="/login" />;
 }
 
-function AppContent() {
+export default function App() {
   const { user } = useAuth();
   return (
     <div className="app-container">
@@ -41,15 +41,5 @@ function AppContent() {
       </main>
       {user && <BottomNav />}
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
   );
 }
