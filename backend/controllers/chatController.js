@@ -115,20 +115,6 @@ exports.sendMessage = async (req, res) => {
             content: content || '',
             mediaUrl: mediaUrl || '',
             replyTo: replyToId || null,
-            timestamp: new Date()
-        };
-
-        chat.messages.push(message);
-        chat.lastMessage = message.mediaUrl ? (message.message_type === 'video' ? '🎥 Video' : '📷 Photo') : (message.content || '');
-        chat.lastMessageTime = new Date();
-        await chat.save();
-
-        const populatedChat = await Chat.findById(chat._id)
-            .populate('messages.sender', 'name avatarUrl')
-            .populate('messages.replyTo');
-        
-        const newMessage = populatedChat.messages[populatedChat.messages.length - 1];
-
         // Send Push Notification
         const sender = await User.findById(req.user.id);
         const recipientStrId = chat.participants.find(p => p.toString() !== req.user.id);

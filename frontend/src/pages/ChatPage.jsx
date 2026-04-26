@@ -54,14 +54,6 @@ export default function ChatPage() {
         setMessages(prev => prev.map(m => m._id === data.messageId ? { ...m, isDeleted: true, content: 'This message was deleted', mediaUrl: '' } : m));
     });
 
-    socket.on('user_typing', ({ userId: uid, isTyping }) => {
-      if (uid === userId) setTyping(isTyping);
-    });
-
-    return () => {
-      socket.off('new_message');
-      socket.off('message_edited');
-      socket.off('message_deleted');
       socket.off('user_typing');
     };
   }, [userId, user?._id]);
@@ -169,124 +161,6 @@ export default function ChatPage() {
     }
   };
 
-  const onPickMedia = (file) => {
-    if (!file) return;
-    const isVideo = file.type?.startsWith('video/');
-    setMediaType(isVideo ? 'video' : 'image');
-    setMediaFile(file);
-    setMediaPreview(URL.createObjectURL(file));
-  };
-
-  const handleTyping = () => {
-    const socket = getSocket();
-    socket.emit('typing', { receiverId: userId, isTyping: true });
-    clearTimeout(typingTimeout.current);
-    typingTimeout.current = setTimeout(() => {
-      socket.emit('typing', { receiverId: userId, isTyping: false });
-    }, 2000);
-  };
-
-  const formatTime = (date) =>
-    new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  return (
-    <div className="chat-page-v2">
-      {/* Header */}
-      <header className="chat-header-v2">
-        <button className="back-btn-v2" onClick={() => navigate('/chat')}>
-          <ArrowLeft size={20} />
-        </button>
-        
-        <div className="partner-info-v2" onClick={() => navigate(`/profile/${userId}`)}>
-          <Avatar src={partner?.avatarUrl} name={partner?.name} size={40} />
-          <div className="partner-text-v2">
-            <span className="partner-name-v2">{partner?.name || 'Chat'}</span>
-            <span className={`status-v2 ${typing ? 'typing' : 'online'}`}>
-              {typing ? 'typing...' : 'online'}
-            </span>
-          </div>
-        </div>
-
-        <button className="more-btn-v2" onClick={() => setShowMenu(!showMenu)}>
-          <MoreVertical size={20} />
-        </button>
-        
-        <AnimatePresence>
-          {showMenu && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: -10 }}
-              className="chat-menu-v2"
-            >
-              <button onClick={async () => {
-                if (window.confirm('Delete conversation?')) {
-                  await api.delete(`/api/chat/${chat._id}`);
-                  navigate('/chat');
-                }
-              }} className="menu-item-v2 delete">
-                Delete Conversation
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
-
-      {/* Messages Area */}
-      <div className="messages-container-v2">
-        {messages.map((msg, i) => {
-          const isMine = String(msg.sender?._id || msg.sender) === String(user?._id);
-          const isSelected = selectedMsgId === msg._id;
-          
-          return (
-            <MessageBubble 
-              key={msg._id || i}
-              msg={msg}
-              isMine={isMine}
-              isSelected={isSelected}
-              onSelect={() => setSelectedMsgId(isSelected ? null : msg._id)}
-              onReply={() => { setReplyingTo(msg); setEditingMsg(null); if (inputRef.current) inputRef.current.focus(); }}
-              onEdit={() => handleEdit(msg)}
-              onDelete={() => handleDeleteMsg(msg._id)}
-              formatTime={formatTime}
-            />
-          );
-        })}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Section */}
-      <div className="chat-footer-v2">
-        {/* Reply/Edit Preview */}
-        <AnimatePresence>
-          {(replyingTo || editingMsg) && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="input-context-v2"
-            >
-              <div className="context-icon-v2">
-                {replyingTo ? <Reply size={14} /> : <Edit2 size={14} />}
-              </div>
-              <div className="context-content-v2">
-                <span className="context-label-v2">
-                  {replyingTo ? `Replying to ${replyingTo.sender?.name || 'Partner'}` : 'Editing message'}
-                </span>
-                <p className="context-text-v2">{replyingTo?.content || editingMsg?.content}</p>
-              </div>
-              <button className="context-close-v2" onClick={() => { setReplyingTo(null); setEditingMsg(null); if (!editingMsg) setInput(''); }}>
-                <X size={16} />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {mediaPreview && (
-          <div className="media-preview-v2">
-            <div className="media-preview-box-v2">
-              {mediaType === 'video' ? <video src={mediaPreview} /> : <img src={mediaPreview} />}
-              <button className="remove-media-v2" onClick={() => { setMediaFile(null); setMediaPreview(''); }}>
                 <X size={14} />
               </button>
             </div>
