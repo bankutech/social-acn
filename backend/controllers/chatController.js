@@ -68,11 +68,7 @@ exports.getChat = async (req, res) => {
             participants: { $all: [userId, req.params.userId] }
         })
         .populate('participants', 'name avatarUrl')
-        .populate('messages.sender', 'name avatarUrl')
-        .populate({
-            path: 'messages.replyTo',
-            populate: { path: 'sender', select: 'name' }
-        });
+        .populate('messages.sender', 'name avatarUrl');
 
         if (!chat) {
             // Create new chat if it doesn't exist
@@ -82,11 +78,7 @@ exports.getChat = async (req, res) => {
             
             const populatedChat = await Chat.findById(newChat._id)
                 .populate('participants', 'name avatarUrl')
-                .populate('messages.sender', 'name avatarUrl')
-                .populate({
-                    path: 'messages.replyTo',
-                    populate: { path: 'sender', select: 'name' }
-                });
+                .populate('messages.sender', 'name avatarUrl');
             
             return res.json(populatedChat);
         }
@@ -132,11 +124,7 @@ exports.sendMessage = async (req, res) => {
 
         // Populate to return full object
         const savedChat = await Chat.findById(chat._id)
-            .populate('messages.sender', 'name avatarUrl')
-            .populate({
-                path: 'messages.replyTo',
-                populate: { path: 'sender', select: 'name' }
-            });
+            .populate('messages.sender', 'name avatarUrl');
         
         const newMessage = savedChat.messages[savedChat.messages.length - 1];
 

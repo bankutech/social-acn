@@ -5,7 +5,7 @@ const MessageSchema = new mongoose.Schema({
     message_type: { type: String, enum: ['text', 'image', 'video'], default: 'text' },
     content: { type: String, default: '' },
     mediaUrl: { type: String, default: '' },
-    replyTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat.messages' },
+    replyTo: { type: mongoose.Schema.Types.ObjectId },
     isEdited: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     timestamp: { type: Date, default: Date.now },

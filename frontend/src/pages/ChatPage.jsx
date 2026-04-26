@@ -246,11 +246,13 @@ export default function ChatPage() {
         {messages.map((msg, i) => {
           const isMine = String(msg.sender?._id || msg.sender) === String(user?._id);
           const isSelected = selectedMsgId === msg._id;
+          const replyMsg = msg.replyTo ? (typeof msg.replyTo === 'object' ? msg.replyTo : messages.find(m => m._id === msg.replyTo)) : null;
           
           return (
             <MessageBubble 
               key={msg._id || i}
               msg={msg}
+              replyMsg={replyMsg}
               isMine={isMine}
               isSelected={isSelected}
               onSelect={() => setSelectedMsgId(isSelected ? null : msg._id)}
@@ -639,7 +641,7 @@ export default function ChatPage() {
   );
 }
 
-function MessageBubble({ msg, isMine, isSelected, onSelect, onReply, onEdit, onDelete, formatTime }) {
+function MessageBubble({ msg, replyMsg, isMine, isSelected, onSelect, onReply, onEdit, onDelete, formatTime }) {
   const x = useMotionValue(0);
   const opacity = useTransform(x, [0, 60], [0, 1]);
   const scale = useTransform(x, [0, 60], [0.8, 1]);
@@ -665,12 +667,12 @@ function MessageBubble({ msg, isMine, isSelected, onSelect, onReply, onEdit, onD
             <Reply size={18} color="#6366f1" />
         </motion.div>
 
-        {msg.replyTo && !msg.isDeleted && (
+        {replyMsg && !msg.isDeleted && (
             <div className="reply-context-bubble">
                 <span style={{ fontWeight: 700, fontSize: 10, display: 'block', marginBottom: 2 }}>
-                    {msg.replyTo.sender?.name || 'Partner'}
+                    {replyMsg.sender?.name || 'Partner'}
                 </span>
-                <span style={{ opacity: 0.7 }}>{msg.replyTo.content}</span>
+                <span style={{ opacity: 0.7 }}>{replyMsg.content || 'Media message'}</span>
             </div>
         )}
 
