@@ -38,14 +38,16 @@ export default function ChatListPage() {
   const loadChats = async () => {
     try {
       const [chatsData, usersData, pChats] = await Promise.all([
-        api.get('/api/chat'),
-        api.get('/api/chat/users'),
+        api.get('/api/chat').catch(() => []),
+        api.get('/api/chat/users').catch(() => []),
         api.get('/api/partner-chat').catch(() => [])
       ]);
-      setChats(chatsData);
-      setUsers(usersData);
-      setPartnerChats(pChats);
-    } catch {}
+      setChats(Array.isArray(chatsData) ? chatsData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
+      setPartnerChats(Array.isArray(pChats) ? pChats : []);
+    } catch (err) {
+      console.error("Failed to load chats:", err);
+    }
     setLoading(false);
   };
 

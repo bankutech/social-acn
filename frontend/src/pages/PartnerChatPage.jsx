@@ -88,7 +88,7 @@ export default function PartnerChatPage() {
     });
 
     return () => {
-      socket.emit('leave_partner_chat', chat._id);
+      if (chat?._id) socket.emit('leave_partner_chat', chat._id);
       socket.off('partner_new_message');
       socket.off('partner_message_edited');
       socket.off('partner_message_deleted');
@@ -110,9 +110,9 @@ export default function PartnerChatPage() {
       setPartner(p);
 
       const msgs = await api.get(`/api/partner-chat/${chatData._id}/messages`);
-      setMessages(msgs);
+      setMessages(Array.isArray(msgs) ? msgs : []);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load partner chat:", err);
     }
     setLoading(false);
     setTimeout(scrollToBottom, 200);
@@ -493,9 +493,8 @@ function PartnerBubble({ msg, isMine, isSelected, theme, onSelect, onReply, onEd
         drag="x"
         dragConstraints={{ left: 0, right: 80 }}
         onDragEnd={(e, info) => info.offset.x > 50 && onReply()}
-        style={{ x }}
-        className={`pc-bubble ${isMine ? 'pc-mine' : 'pc-theirs'} ${msg.isDeleted ? 'deleted' : ''}`}
         style={{ background: isMine ? theme.accent : theme.msgBg, x }}
+        className={`pc-bubble ${isMine ? 'pc-mine' : 'pc-theirs'} ${msg.isDeleted ? 'deleted' : ''}`}
         onClick={onSelect}
       >
         <motion.div style={{ position: 'absolute', left: -40, top: '50%', y: '-50%', opacity, scale }}>

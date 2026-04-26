@@ -71,11 +71,12 @@ export default function ChatPage() {
       setError('');
       const data = await api.get(`/api/chat/${userId}`);
       setChat(data);
-      setMessages(data.messages || []);
-      const p = data.participants?.find(p => p._id !== user?._id);
-      setPartner(p);
-    } catch (e) {
-      setError(e?.message || 'Failed to load chat');
+      const partnerUser = data.participants?.find(p => String(p._id || p) !== String(user?._id));
+      setPartner(partnerUser);
+      setMessages(Array.isArray(data.messages) ? data.messages : []);
+    } catch (err) {
+      console.error("Failed to load chat:", err);
+      setError('Could not load chat. Please try again.');
     }
     setLoading(false);
     setTimeout(scrollToBottom, 100);

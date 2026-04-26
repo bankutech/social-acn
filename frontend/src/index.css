@@ -136,6 +136,16 @@ input::placeholder, textarea::placeholder {
   min-height: 100vh;
 }
 
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content.has-nav {
+  padding-bottom: var(--bottom-nav-height);
+}
+
 .btn-primary {
   background: var(--gradient-primary);
   color: white;
