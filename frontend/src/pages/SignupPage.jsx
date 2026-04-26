@@ -281,6 +281,7 @@ export default function SignupPage() {
         /* SPLIT LAYOUT */
         .modern-auth-split {
           display: flex;
+          width: 100%;
           min-height: 100vh;
           background: var(--bg-primary);
           overflow: hidden;
