@@ -305,6 +305,14 @@ export default function PartnerChatPage() {
       <div className="pc-messages">
         {loading && <div className="pc-loader"><div className="pc-spinner" style={{ borderTopColor: t.accent }} /></div>}
         
+        {messages.length === 0 && !loading && (
+          <div className="pc-empty">
+            <div className="pc-empty-icon">🔒</div>
+            <h3>Your private sphere</h3>
+            <p>Messages are end-to-end encrypted and auto-delete after 24 hours.</p>
+          </div>
+        )}
+
         {messages.map((msg, i) => {
           const isMine = String(msg.sender_id?._id || msg.sender_id) === String(user?._id);
           const isSelected = selectedMsgId === msg._id;
@@ -439,6 +447,20 @@ export default function PartnerChatPage() {
         .pc-notice { background: rgba(124,58,237,0.1); padding: 8px 16px; font-size: 11px; color: #c4b5fd; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         
         .pc-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        
+        .pc-empty {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px;
+          text-align: center;
+          opacity: 0.6;
+        }
+        .pc-empty-icon { font-size: 48px; margin-bottom: 16px; }
+        .pc-empty h3 { font-size: 18px; margin-bottom: 8px; }
+        .pc-empty p { font-size: 13px; max-width: 240px; line-height: 1.4; }
         .pc-bubble-row { display: flex; flex-direction: column; width: 100%; position: relative; }
         .pc-bubble-row.mine { align-items: flex-end; }
         .pc-bubble-row.theirs { align-items: flex-start; }

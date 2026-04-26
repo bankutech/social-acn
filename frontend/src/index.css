@@ -64,11 +64,12 @@ html {
 
 body {
   font-family: var(--font);
-  background: var(--bg-primary);
+  background: radial-gradient(circle at top right, #1a1033 0%, #0a0a0a 100%);
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.5;
+  background-attachment: fixed;
 }
 
 #root {
@@ -120,16 +121,29 @@ input::placeholder, textarea::placeholder {
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ===== Utility Classes ===== */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .page-container {
+  width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0;
   padding-bottom: calc(var(--bottom-nav-height) + 16px);
   min-height: 100vh;
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255,255,255,0.05);
+  border-right: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 0 50px rgba(0,0,0,0.5);
 }
 
 .page-container-wide {
-  max-width: 900px;
+  width: 100%;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 0 16px;
   padding-bottom: calc(var(--bottom-nav-height) + 16px);
@@ -140,10 +154,12 @@ input::placeholder, textarea::placeholder {
   flex: 1;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  align-items: center;
 }
 
 .main-content.has-nav {
-  padding-bottom: var(--bottom-nav-height);
+  padding-bottom: 0;
 }
 
 .btn-primary {

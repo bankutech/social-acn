@@ -235,6 +235,14 @@ export default function ChatPage() {
 
       {/* Messages Area */}
       <div className="messages-container-v2">
+        {messages.length === 0 && !loading && (
+          <div className="empty-chat-v2">
+            <div className="empty-chat-icon-v2">💬</div>
+            <h3>No messages yet</h3>
+            <p>Send a message to start the conversation!</p>
+          </div>
+        )}
+
         {messages.map((msg, i) => {
           const isMine = String(msg.sender?._id || msg.sender) === String(user?._id);
           const isSelected = selectedMsgId === msg._id;
@@ -421,6 +429,22 @@ export default function ChatPage() {
           flex-direction: column;
           gap: 8px;
         }
+
+        .empty-chat-v2 {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px;
+          text-align: center;
+          opacity: 0.5;
+        }
+        .empty-chat-icon-v2 {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+        .empty-chat-v2 h3 { margin-bottom: 8px; }
 
         .bubble-row-v2 {
           display: flex;
