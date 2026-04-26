@@ -348,12 +348,17 @@ export default function ChatPage() {
 
       <style>{`
         .chat-page-v2 {
+          width: 100%;
+          max-width: 800px;
           height: 100dvh;
           display: flex;
           flex-direction: column;
-          background: #000;
+          background: rgba(0,0,0,0.4);
+          backdrop-filter: blur(20px);
           color: white;
           font-family: 'Inter', sans-serif;
+          border-left: 1px solid rgba(255,255,255,0.05);
+          border-right: 1px solid rgba(255,255,255,0.05);
         }
 
         .chat-header-v2 {

@@ -437,7 +437,19 @@ export default function PartnerChatPage() {
       </AnimatePresence>
 
       <style>{`
-        .pc-page { height: 100dvh; display: flex; flex-direction: column; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .pc-page { 
+          width: 100%;
+          max-width: 800px;
+          height: 100dvh; 
+          display: flex; 
+          flex-direction: column; 
+          color: white; 
+          font-family: 'Inter', sans-serif; 
+          overflow: hidden;
+          border-left: 1px solid rgba(255,255,255,0.05);
+          border-right: 1px solid rgba(255,255,255,0.05);
+          backdrop-filter: blur(20px);
+        }
         .pc-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(0,0,0,0.3); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.05); }
         .pc-icon-btn { background: none; border: none; color: rgba(255,255,255,0.7); padding: 8px; cursor: pointer; }
         .pc-header-info { flex: 1; display: flex; align-items: center; gap: 12px; cursor: pointer; }
