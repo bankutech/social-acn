@@ -36,7 +36,8 @@ export default function App() {
           <Route path="/partner-chat/:partnerId" element={<PrivateRoute><PartnerChatPage /></PrivateRoute>} />
           <Route path="/profile" element={user ? <Navigate to={`/profile/${user._id || user.id}`} /> : <Navigate to="/login" />} />
           <Route path="/profile/:userId" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-          <Route path="/create-post" element={<PrivateRoute><CreatePostPage /></PrivateRoute>} />
+          <Route path="/create" element={<PrivateRoute><CreatePostPage /></PrivateRoute>} />
+          <Route path="/create-post" element={<Navigate to="/create" replace />} />
           <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
         </Routes>
       </main>
