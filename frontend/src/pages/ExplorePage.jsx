@@ -87,7 +87,7 @@ export default function ExplorePage() {
         <div className="explorer-grid">
           <AnimatePresence mode="popLayout">
             {loading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div key="loading" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {[1, 2, 3, 4, 5].map(i => (
                   <div key={i} className="premium-user-card" style={{ pointerEvents: 'none' }}>
                     <div className="card-user-meta">
@@ -102,6 +102,7 @@ export default function ExplorePage() {
               </div>
             ) : displayUsers.length === 0 ? (
               <motion.div
+                key="empty"
                 className="no-results-premium"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

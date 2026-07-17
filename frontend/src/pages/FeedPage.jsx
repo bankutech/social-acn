@@ -85,11 +85,12 @@ export default function FeedPage() {
         <div className="post-feed-container">
           <AnimatePresence mode="popLayout">
             {loading ? (
-              <div className="feed-skeleton-stack">
+              <div key="loading" className="feed-skeleton-stack">
                 {[1, 2, 3].map(i => <PostSkeleton key={i} />)}
               </div>
             ) : posts.length === 0 ? (
               <motion.div
+                key="empty"
                 className="premium-empty-feed"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
