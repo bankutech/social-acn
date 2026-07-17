@@ -1,16 +1,51 @@
-# React + Vite
+# ACN+ Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This directory contains the React-based frontend application for ACN+. It is built for extreme performance, aesthetic superiority, and a seamless developer experience using Vite.
 
-Currently, two official plugins are available:
+## 🛠 Tech Stack
+- **Framework:** React 19
+- **Bundler:** Vite
+- **Styling:** Vanilla CSS (Glassmorphism & Custom properties)
+- **Animations:** Framer Motion
+- **Icons:** Lucide React
+- **Auth:** `@react-oauth/google`
+- **Routing:** React Router DOM (v6)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 📂 Folder Structure
+```text
+src/
+├── assets/         # Static assets (images, fonts, global CSS)
+├── components/     # Reusable UI components (Avatar, Skeletons, Modals)
+├── config/         # App-wide configurations (Branding constants)
+├── context/        # React Context providers (AuthContext, ThemeContext)
+├── lib/            # Utility libraries and API interceptors (axios config)
+├── pages/          # Full page components corresponding to routes
+├── App.jsx         # Root router configuration
+└── main.jsx        # React DOM entry point
+```
 
-## React Compiler
+## 🚀 Development Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Expanding the ESLint configuration
+2. Create a `.env` file in this directory based on the following template:
+   ```env
+   VITE_API_URL=http://localhost:5000
+   VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+   ```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+3. Start the Vite development server:
+   ```bash
+   npm run dev
+   ```
+
+## 📦 Production Build
+
+To build the app for production (e.g., deploying to Vercel or Netlify):
+```bash
+npm run build
+```
+This will output static files into the `dist/` directory. You can preview the production build locally using `npm run preview`.
