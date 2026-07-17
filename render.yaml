@@ -13,7 +13,7 @@ services:
       - key: PORT
         value: 5000
       - key: MONGO_URI
-        sync: false
+        value: mongodb+srv://sagnikmitra1302_db_user:ihEKnJ5DmzDzqrou@cluster0.vwuwxux.mongodb.net/acn_plus?appName=Cluster0
       - key: JWT_SECRET
         generateValue: true
     # Persistent disk for uploads (Requires Render Starter plan or above)
