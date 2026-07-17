@@ -14,9 +14,9 @@
   <p align="center">
     <a href="#-features">Features</a> •
     <a href="#-tech-stack">Tech Stack</a> •
+    <a href="#-architecture--folder-structure">Architecture</a> •
     <a href="#-getting-started">Getting Started</a> •
-    <a href="#-environment-variables">Environment Variables</a> •
-    <a href="#-design-philosophy">Design Philosophy</a>
+    <a href="#-environment-variables">Environment Variables</a>
   </p>
 </div>
 
@@ -40,19 +40,53 @@ ACN+ combines the best features of social media with powerful educational tools.
 ## 🛠 Tech Stack
 
 ### Frontend (Client)
-- **Framework:** React.js 19 + Vite
+Built for extreme performance and aesthetic superiority using Vite.
+- **Framework:** React.js 19
+- **Bundler:** Vite
 - **Styling:** Vanilla CSS (Premium Dark Aesthetic, Glassmorphism)
 - **Animations:** Framer Motion
 - **Icons:** Lucide React
 - **Authentication:** `@react-oauth/google`
-- **Routing:** React Router v6
+- **Routing:** React Router DOM (v6)
 
 ### Backend (Server)
-- **Runtime:** Node.js + Express.js
-- **Database:** MongoDB Atlas (Mongoose ODM)
+A robust REST API providing secure authentication and real-time WebSocket communication.
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Database:** MongoDB Atlas (via Mongoose ODM)
 - **Real-Time:** Socket.io
-- **File Storage:** Cloudinary + Multer
+- **File Storage:** Cloudinary + `multer-storage-cloudinary`
 - **Security:** bcrypt, jsonwebtoken, CORS
+
+---
+
+## 📂 Architecture & Folder Structure
+
+This repository is structured as a full-stack monorepo containing both the React frontend and the Node.js backend.
+
+### Frontend Directory (`/frontend`)
+```text
+src/
+├── assets/         # Static assets (images, fonts, global CSS)
+├── components/     # Reusable UI components (Avatar, Skeletons, Modals)
+├── config/         # App-wide configurations (Branding constants)
+├── context/        # React Context providers (AuthContext, ThemeContext)
+├── lib/            # Utility libraries and API interceptors (axios config)
+├── pages/          # Full page components corresponding to routes
+├── App.jsx         # Root router configuration
+└── main.jsx        # React DOM entry point
+```
+
+### Backend Directory (`/backend`)
+```text
+backend/
+├── config/         # Database and Cloudinary connection setup
+├── controllers/    # Core business logic for endpoints
+├── middleware/     # Custom Express middleware (Auth, Error handling)
+├── models/         # Mongoose DB Schemas
+├── routes/         # Express router definitions
+└── server.js       # Main application entry point & Socket.io setup
+```
 
 ---
 
@@ -72,20 +106,22 @@ cd social-acn
 ```
 
 ### 2. Backend Setup
-Navigate to the backend directory, install dependencies, and start the server.
+Navigate to the backend directory, install dependencies, and start the server in development mode (with auto-reloading).
 ```bash
 cd backend
 npm install
-npm start
+npm run dev
 ```
+The API will run on `http://localhost:5000` by default.
 
 ### 3. Frontend Setup
-Open a new terminal window, navigate to the frontend directory, install dependencies, and start the dev server.
+Open a new terminal window, navigate to the frontend directory, install dependencies, and start the Vite dev server.
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+To build the frontend for production, run `npm run build`.
 
 ---
 
@@ -120,6 +156,17 @@ VITE_API_URL=http://localhost:5000
 # Google Authentication
 VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 ```
+
+---
+
+## 📡 Backend API Overview
+
+The REST API exposes several core routes:
+- `/api/auth` - User registration, login, profile management, and following system.
+- `/api/posts` - CRUD operations for feed posts, including likes and comments.
+- `/api/reels` - Video content management.
+- `/api/chat` - Real-time direct messaging history.
+- `/api/upload` - Secure file uploads bridged to Cloudinary.
 
 ---
 
