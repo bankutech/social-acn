@@ -29,7 +29,7 @@ ACN+ combines the best features of social media with powerful educational tools.
 - **🔒 Secure Authentication:** Custom JWT auth flow alongside seamless **Google OAuth** integration.
 - **📱 Dynamic Feed:** High-performance infinite scrolling with a personalized feed showcasing posts from people you follow.
 - **🎬 Reels (60s Learning):** Full-screen vertical video experience with auto-play, likes, comments, and sound toggles.
-- **💬 Real-Time Chat:** Private, end-to-end feel messaging powered by Socket.io, featuring typing indicators and instant delivery.
+- **💬 Real-Time Chat:** Instant, low-latency chat powered by Socket.io, featuring typing indicators and instant delivery.
 - **☁️ Cloud Storage:** Direct integration with Cloudinary for fast and reliable image/video uploads.
 - **✨ Glassmorphism UI:** Stunning dark mode aesthetics powered by Framer Motion micro-animations and rich mesh gradients.
 - **🤖 AI Integration:** Integrated AI assistant to help summarize posts and answer academic queries.
@@ -127,7 +127,7 @@ To build the frontend for production, run `npm run build`.
 
 ## 🔑 Environment Variables
 
-To run this project, you will need to create `.env` files in both the `frontend` and `backend` directories.
+To run this project, you will need to create `.env` files in both the `frontend` and `backend` directories. We have provided `.env.example` files in both directories to make this easy.
 
 ### Backend (`backend/.env`)
 ```env
@@ -138,14 +138,24 @@ NODE_ENV=development
 # Database
 MONGO_URI=mongodb+srv://<username>:<password>@cluster0...
 
-# Authentication
+# Authentication (JWT)
 JWT_SECRET=your_super_secret_jwt_key
 JWT_EXPIRE=30d
+
+# Google Authentication (OAuth)
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 # Cloudinary (Image/Video Storage)
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+
+# AI Assistant (Google Gemini)
+GEMINI_API_KEY=your_gemini_api_key
+
+# Web Push Notifications (VAPID)
+VAPID_PUBLIC_KEY=your_vapid_public_key
+VAPID_PRIVATE_KEY=your_vapid_private_key
 ```
 
 ### Frontend (`frontend/.env`)
@@ -167,6 +177,12 @@ The REST API exposes several core routes:
 - `/api/reels` - Video content management.
 - `/api/chat` - Real-time direct messaging history.
 - `/api/upload` - Secure file uploads bridged to Cloudinary.
+
+---
+
+## 🧪 Testing
+
+There is currently no automated test suite (Jest/Cypress/Mocha) configured for this repository. All testing must be performed manually. 
 
 ---
 
