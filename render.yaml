@@ -1,6 +1,7 @@
 services:
   - type: web
     name: social-acn-backend
+    plan: free
     env: node
     region: ohio
     rootDir: backend
