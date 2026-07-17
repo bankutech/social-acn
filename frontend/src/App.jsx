@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import BottomNav from './components/BottomNav';
 import FeedPage from './pages/FeedPage';
 import ExplorePage from './pages/ExplorePage';
+import SearchPage from './pages/SearchPage';
 import ChatListPage from './pages/ChatListPage';
 import ChatPage from './pages/ChatPage';
 import PartnerChatPage from './pages/PartnerChatPage';
@@ -12,6 +13,9 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ReelsPage from './pages/ReelsPage';
 import AdminPage from './pages/AdminPage';
+import BookmarksPage from './pages/BookmarksPage';
+import GroupsListPage from './pages/GroupsListPage';
+import GroupDetailPage from './pages/GroupDetailPage';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -38,6 +42,10 @@ export default function App() {
           <Route path="/profile/:userId" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="/create" element={<PrivateRoute><CreatePostPage /></PrivateRoute>} />
           <Route path="/create-post" element={<Navigate to="/create" replace />} />
+          <Route path="/search" element={<PrivateRoute><SearchPage /></PrivateRoute>} />
+          <Route path="/bookmarks" element={<PrivateRoute><BookmarksPage /></PrivateRoute>} />
+          <Route path="/groups" element={<PrivateRoute><GroupsListPage /></PrivateRoute>} />
+          <Route path="/groups/:groupId" element={<PrivateRoute><GroupDetailPage /></PrivateRoute>} />
           <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
         </Routes>
       </main>

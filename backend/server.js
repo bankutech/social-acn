@@ -49,7 +49,12 @@ const postRoutes = require('./routes/postRoutes');
 const reelRoutes = require('./routes/reelRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const partnerChatRoutes = require('./routes/partnerChatRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const searchRoutes = require('./routes/searchRoutes');
+const bookmarkRoutes = require('./routes/bookmarkRoutes');
+const groupRoutes = require('./routes/groupRoutes');
 
 app.use(checkDbConnection);
 
@@ -58,7 +63,12 @@ app.use('/api/posts', postRoutes);
 app.use('/api/reels', reelRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/partner-chat', partnerChatRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/bookmarks', bookmarkRoutes);
+app.use('/api/groups', groupRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

@@ -1,17 +1,44 @@
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Compass, Plus, MessageCircle, User } from 'lucide-react';
-
-const navItems = [
-  { path: '/',        icon: Home,          label: 'Feed'    },
-  { path: '/explore', icon: Compass,       label: 'Explore' },
-  { path: '/create',  icon: Plus,          label: 'Post',   isCreate: true },
-  { path: '/chat',    icon: MessageCircle, label: 'Chat'    },
-  { path: '/profile', icon: User,          label: 'You'     },
-];
+import { Home, Compass, Plus, MessageCircle, User, Bell, Search, Users } from 'lucide-react';
+import NotificationPanel from './NotificationPanel';
+import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { io } from 'socket.io-client';
 
 export default function BottomNav() {
   const location = useLocation();
+  const { user } = useAuth();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    // Initial fetch
+    api.get('/api/notifications').then(data => {
+      setUnreadCount(data.filter(n => !n.read).length);
+    }).catch(() => {});
+
+    // Socket listener for new notifications
+    const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+    socket.emit('join', user._id || user.id);
+    
+    socket.on(`notification_${user._id || user.id}`, () => {
+        setUnreadCount(prev => prev + 1);
+    });
+
+    return () => socket.disconnect();
+  }, [user]);
+
+  const navItems = [
+    { path: '/',        icon: Home,          label: 'Feed'    },
+    { path: '/search',  icon: Search,        label: 'Search'  },
+    { path: '/groups',  icon: Users,         label: 'Groups'  },
+    { action: () => setShowNotifications(true), icon: Bell, label: 'Alerts', badge: unreadCount > 0 },
+    { path: '/profile', icon: User,          label: 'You'     },
+  ];
 
   const hideOn = ['/login', '/signup'];
   if (hideOn.includes(location.pathname)) return null;
@@ -115,58 +142,74 @@ export default function BottomNav() {
 
       <nav className="bnav-root" aria-label="Main navigation">
         <div className="bnav-bar">
-          {navItems.map(({ path, icon: Icon, label, isCreate, badge }) => {
-            const isActive = path === '/'
+          {navItems.map(({ path, action, icon: Icon, label, isCreate, badge }) => {
+            const isActive = path ? (path === '/'
               ? location.pathname === '/'
-              : location.pathname.startsWith(path);
+              : location.pathname.startsWith(path)) : false;
 
-            return (
-              <NavLink key={path} to={path} className="bnav-item">
-                <motion.div
-                  whileTap={{ scale: 0.80 }}
-                  transition={{ type: 'spring', stiffness: 480, damping: 22 }}
-                  style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
-                >
-                  {isCreate ? (
-                    <div className="bnav-create">
-                      <Icon size={17} color="#08080a" strokeWidth={2.5} />
-                    </div>
-                  ) : (
-                    <div className={`bnav-icon-wrap ${isActive ? 'active' : ''}`}>
-                      <Icon
-                        size={20}
-                        color={isActive ? '#f0ede8' : 'rgba(240,237,232,0.32)'}
-                        strokeWidth={isActive ? 2.2 : 1.6}
-                      />
-                    </div>
-                  )}
-
-                  {badge && <div className="bnav-badge" />}
-
-                  <span className={`bnav-label ${isActive ? 'active' : 'inactive'}`}>
-                    {label}
-                  </span>
-
-                  {isActive && !isCreate && (
-                    <motion.div
-                      layoutId="bnav-active-dot"
-                      style={{
-                        width: 3,
-                        height: 3,
-                        borderRadius: '50%',
-                        background: 'rgba(240,237,232,0.5)',
-                        position: 'absolute',
-                        bottom: -6,
-                      }}
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }}
+            const content = (
+              <motion.div
+                whileTap={{ scale: 0.80 }}
+                transition={{ type: 'spring', stiffness: 480, damping: 22 }}
+                style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+              >
+                {isCreate ? (
+                  <div className="bnav-create">
+                    <Icon size={17} color="#08080a" strokeWidth={2.5} />
+                  </div>
+                ) : (
+                  <div className={`bnav-icon-wrap ${isActive ? 'active' : ''}`}>
+                    <Icon
+                      size={20}
+                      color={isActive ? '#f0ede8' : 'rgba(240,237,232,0.32)'}
+                      strokeWidth={isActive ? 2.2 : 1.6}
                     />
-                  )}
-                </motion.div>
+                  </div>
+                )}
+
+                {badge && <div className="bnav-badge" />}
+
+                <span className={`bnav-label ${isActive ? 'active' : 'inactive'}`}>
+                  {label}
+                </span>
+
+                {isActive && !isCreate && (
+                  <motion.div
+                    layoutId="bnav-active-dot"
+                    style={{
+                      width: 3,
+                      height: 3,
+                      borderRadius: '50%',
+                      background: 'rgba(240,237,232,0.5)',
+                      position: 'absolute',
+                      bottom: -6,
+                    }}
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }}
+                  />
+                )}
+              </motion.div>
+            );
+
+            return path ? (
+              <NavLink key={path} to={path} className="bnav-item">
+                {content}
               </NavLink>
+            ) : (
+              <div key={label} onClick={action} className="bnav-item" style={{ cursor: 'pointer' }}>
+                {content}
+              </div>
             );
           })}
         </div>
       </nav>
+
+      <NotificationPanel 
+        isOpen={showNotifications} 
+        onClose={() => {
+            setShowNotifications(false);
+            setUnreadCount(0); // Optimistic clear
+        }} 
+      />
     </>
   );
 }

@@ -129,6 +129,21 @@ exports.likePost = async (req, res) => {
             post.likes.pull(req.user.id);
         } else {
             post.likes.push(req.user.id);
+            
+            // Create Notification
+            if (post.author.toString() !== req.user.id) {
+                const Notification = require('../models/Notification');
+                await Notification.create({
+                    recipient: post.author,
+                    sender: req.user.id,
+                    type: 'like',
+                    relatedPost: post._id
+                });
+                
+                // Emit socket event
+                const io = req.app.get('io');
+                io.emit(`notification_${post.author}`, { type: 'like', sender: req.user.id, post: post._id });
+            }
         }
 
         await post.save();
@@ -155,6 +170,21 @@ exports.addComment = async (req, res) => {
 
         post.comments.push(comment);
         await post.save();
+        
+        // Create Notification
+        if (post.author.toString() !== req.user.id) {
+            const Notification = require('../models/Notification');
+            await Notification.create({
+                recipient: post.author,
+                sender: req.user.id,
+                type: 'comment',
+                relatedPost: post._id
+            });
+            
+            // Emit socket event
+            const io = req.app.get('io');
+            io.emit(`notification_${post.author}`, { type: 'comment', sender: req.user.id, post: post._id });
+        }
 
         const populatedComment = await Post.findById(req.params.id)
             .populate('comments.author', 'name avatarUrl')

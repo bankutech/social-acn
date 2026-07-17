@@ -20,7 +20,8 @@ const UserSchema = new mongoose.Schema({
             p256dh: String,
             auth: String
         }
-    }]
+    }],
+    bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }]
 }, { timestamps: true });
 
 // Hash password before saving

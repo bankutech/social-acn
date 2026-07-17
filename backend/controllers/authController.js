@@ -249,6 +249,20 @@ exports.toggleFollow = async (req, res) => {
         } else {
             user.following.push(targetId);
             target.followers.push(userId);
+            
+            // Create Notification
+            const Notification = require('../models/Notification');
+            await Notification.create({
+                recipient: targetId,
+                sender: userId,
+                type: 'follow'
+            });
+            
+            // Emit socket event
+            const io = req.app.get('io');
+            if (io) {
+                io.emit(`notification_${targetId}`, { type: 'follow', sender: userId });
+            }
         }
 
         await user.save();

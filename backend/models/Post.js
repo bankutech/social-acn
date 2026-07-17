@@ -15,8 +15,9 @@ const PostSchema = new mongoose.Schema({
         createdAt: { type: Date, default: Date.now }
     }],
     savedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    visibility: { type: String, enum: ['public', 'followers'], default: 'followers' },
-    cloudinaryPublicId: { type: String }
+    visibility: { type: String, enum: ['public', 'followers', 'group'], default: 'followers' },
+    cloudinaryPublicId: { type: String },
+    group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Post', PostSchema);
