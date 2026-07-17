@@ -26,7 +26,7 @@ export default function App() {
       <main className={user ? 'main-content has-nav' : 'main-content'}>
         <Routes>
           <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
-          <Route path="/register" element={!user ? <SignupPage /> : <Navigate to="/" />} />
+          <Route path="/signup" element={!user ? <SignupPage /> : <Navigate to="/" />} />
           
           <Route path="/" element={<PrivateRoute><FeedPage /></PrivateRoute>} />
           <Route path="/explore" element={<PrivateRoute><ExplorePage /></PrivateRoute>} />
