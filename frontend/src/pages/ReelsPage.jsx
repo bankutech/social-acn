@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Heart, MessageCircle, Send, X, Trash2, Play, Volume2, VolumeX, MoreVertical, Music } from 'lucide-react';
 
 export default function ReelsPage() {
@@ -10,17 +10,17 @@ export default function ReelsPage() {
   const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadReels();
-  }, []);
-
   const loadReels = async () => {
     try {
       const data = await api.get('/api/reels');
       setReels(data);
-    } catch {}
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadReels();
+  }, []);
 
   if (loading) {
     return (

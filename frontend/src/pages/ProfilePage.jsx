@@ -22,10 +22,6 @@ export default function ProfilePage() {
 
   const isOwnProfile = !userId || userId === user?._id;
 
-  useEffect(() => {
-    loadProfile();
-  }, [userId]);
-
   const loadProfile = async () => {
     try {
       const profileData = isOwnProfile
@@ -45,19 +41,23 @@ export default function ProfilePage() {
         ]);
         setPosts(userPosts);
         setReels(userReels);
-      } catch {}
+      } catch (e) { console.error(e); }
     } catch (err) {
       console.error(err);
     }
     setLoading(false);
   };
 
+  useEffect(() => {
+    loadProfile();
+  }, [userId]);
+
   const handleFollow = async () => {
     try {
       const res = await api.post(`/api/auth/follow/${userId}`);
       setIsFollowing(res.following);
       loadProfile();
-    } catch {}
+    } catch (e) { console.error(e); }
   };
 
 
