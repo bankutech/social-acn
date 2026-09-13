@@ -1,3 +1,6 @@
+# social-acn
+
+## Overview
 <div align="center">
   <img src="https://via.placeholder.com/150/0a0a0c/a78bfa?text=ACN+" alt="ACN+ Logo" width="120" />
   
@@ -24,20 +27,20 @@
 
 ACN+ combines the best features of social media with powerful educational tools. Built with a focus on rich aesthetics, real-time interaction, and seamless performance, it serves as a modern hub for students to connect, share knowledge, and grow their networks.
 
-## 🚀 Features
+##  Features
 
-- **🔒 Secure Authentication:** Custom JWT auth flow alongside seamless **Google OAuth** integration.
-- **📱 Dynamic Feed:** High-performance infinite scrolling with a personalized feed showcasing posts from people you follow.
-- **🎬 Reels (60s Learning):** Full-screen vertical video experience with auto-play, likes, comments, and sound toggles.
-- **💬 Real-Time Chat:** Instant, low-latency chat powered by Socket.io, featuring typing indicators and instant delivery.
-- **☁️ Cloud Storage:** Direct integration with Cloudinary for fast and reliable image/video uploads.
-- **✨ Glassmorphism UI:** Stunning dark mode aesthetics powered by Framer Motion micro-animations and rich mesh gradients.
-- **🤖 AI Integration:** Integrated AI assistant to help summarize posts and answer academic queries.
-- **📱 Fully Responsive:** A first-class mobile experience optimized for modern smartphones and PWA-ready.
+- ** Secure Authentication:** Custom JWT auth flow alongside seamless **Google OAuth** integration.
+- ** Dynamic Feed:** High-performance infinite scrolling with a personalized feed showcasing posts from people you follow.
+- ** Reels (60s Learning):** Full-screen vertical video experience with auto-play, likes, comments, and sound toggles.
+- ** Real-Time Chat:** Instant, low-latency chat powered by Socket.io, featuring typing indicators and instant delivery.
+- **️ Cloud Storage:** Direct integration with Cloudinary for fast and reliable image/video uploads.
+- ** Glassmorphism UI:** Stunning dark mode aesthetics powered by Framer Motion micro-animations and rich mesh gradients.
+- ** AI Integration:** Integrated AI assistant to help summarize posts and answer academic queries.
+- ** Fully Responsive:** A first-class mobile experience optimized for modern smartphones and PWA-ready.
 
 ---
 
-## 🛠 Tech Stack
+##  Tech Stack
 
 ### Frontend (Client)
 Built for extreme performance and aesthetic superiority using Vite.
@@ -60,7 +63,7 @@ A robust REST API providing secure authentication and real-time WebSocket commun
 
 ---
 
-## 📂 Architecture & Folder Structure
+##  Architecture & Folder Structure
 
 This repository is structured as a full-stack monorepo containing both the React frontend and the Node.js backend.
 
@@ -90,7 +93,7 @@ backend/
 
 ---
 
-## 📦 Getting Started
+##  Getting Started
 
 ### Prerequisites
 Before you begin, ensure you have the following installed:
@@ -125,7 +128,7 @@ To build the frontend for production, run `npm run build`.
 
 ---
 
-## 🔑 Environment Variables
+##  Environment Variables
 
 To run this project, you will need to create `.env` files in both the `frontend` and `backend` directories. We have provided `.env.example` files in both directories to make this easy.
 
@@ -169,7 +172,7 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 ---
 
-## 📡 Backend API Overview
+##  Backend API Overview
 
 The REST API exposes several core routes:
 - `/api/auth` - User registration, login, profile management, and following system.
@@ -180,13 +183,13 @@ The REST API exposes several core routes:
 
 ---
 
-## 🧪 Testing
+##  Testing
 
 There is currently no automated test suite (Jest/Cypress/Mocha) configured for this repository. All testing must be performed manually. 
 
 ---
 
-## 🎨 Design Philosophy
+##  Design Philosophy
 
 ACN+ follows a **Premium Dark Aesthetic** to ensure the app feels like a top-tier modern product. The UI relies on:
 - **Vibrant Mesh Gradients**: Deep purples (`#7c3aed`), glowing cyans (`#06b6d4`), and soft off-whites.
@@ -195,10 +198,16 @@ ACN+ follows a **Premium Dark Aesthetic** to ensure the app feels like a top-tie
 
 ---
 
-## 🛡 License & Copyright
+##  License & Copyright
 
 This project is open-source and available under the MIT License.
 
 <div align="center">
-  <i>Built with ❤️ for modern students.</i>
+  <i>Built with ️ for modern students.</i>
 </div>
+
+## Getting Started
+Please refer to the source files for specific installation and usage instructions. Ensure that your local environment meets the standard requirements for the associated technologies.
+
+## Project Structure
+This project is organized into standard directories. Key configuration files and primary source code are located in the root directory.
