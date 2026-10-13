@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
-import SkeletonLoader from '../components/Skeleton';
-import EmptyState from '../components/EmptyState';
+import SkeletonLoader from '../components/SkeletonLoader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, ArrowLeft, Flame, MessageCircle, Grid3X3, Film } from 'lucide-react';
+import { Settings, ArrowLeft, Flame, MessageCircle, Heart, Grid3X3, Briefcase, GraduationCap, Film, Plus, UserPlus } from 'lucide-react';
 import { BRAND } from '../config/brand';
 
 export default function ProfilePage() {
@@ -22,8 +20,6 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useDocumentTitle(profile?.name || 'Profile');
-
   const isOwnProfile = !userId || userId === user?._id;
 
   const loadProfile = async () => {
@@ -32,21 +28,20 @@ export default function ProfilePage() {
         ? await api.get('/api/auth/profile')
         : await api.get(`/api/auth/profile/${userId}`);
       setProfile(profileData);
-
+      
       const currentUserId = user?._id || user?.id;
-      setIsFollowing(profileData.followers?.some((f) => (f._id || f) === currentUserId));
+      setIsFollowing(profileData.followers?.some(f => (f._id || f) === currentUserId));
 
+      // Load user's posts, reels, stories using dedicated endpoints
       try {
         const targetId = userId || currentUserId;
         const [userPosts, userReels] = await Promise.all([
-          api.get(`/api/posts/user/${targetId}`),
-          api.get(`/api/reels/user/${targetId}`),
+           api.get(`/api/posts/user/${targetId}`),
+           api.get(`/api/reels/user/${targetId}`)
         ]);
         setPosts(userPosts);
         setReels(userReels);
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) { console.error(e); }
     } catch (err) {
       console.error(err);
     }
@@ -62,361 +57,515 @@ export default function ProfilePage() {
       const res = await api.post(`/api/auth/follow/${userId}`);
       setIsFollowing(res.following);
       loadProfile();
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
+
 
   if (loading) {
     return (
-      <div className="pp-root">
+      <div className="premium-profile-layout">
         <SkeletonLoader type="profile" />
       </div>
     );
   }
 
   return (
-    <div className="pp-root">
-      <header className="pp-header">
-        <div className="pp-header-inner">
-          {!isOwnProfile && (
-            <button className="pp-header-btn" onClick={() => navigate(-1)} aria-label="Back">
-              <ArrowLeft size={18} />
-            </button>
-          )}
-          <span className="pp-header-name">{profile?.name}</span>
+    <div className="premium-profile-layout">
+      {/* Dynamic Background */}
+      <div className="profile-banner-mesh"></div>
+
+      {/* Header */}
+      <header className="profile-glass-header">
+        {!isOwnProfile && (
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            <ArrowLeft size={20} />
+          </button>
+        )}
+        <h1 className="header-username">{profile?.name}</h1>
+        <div className="header-actions">
           {isOwnProfile && (
-            <button
-              className="pp-header-btn"
-              onClick={() => navigate('/profile/edit')}
-              aria-label="Edit profile"
-            >
-              <Settings size={18} />
+            <button className="settings-btn" onClick={() => navigate('/profile/edit')}>
+              <Settings size={20} />
             </button>
           )}
         </div>
       </header>
 
-      <main className="pp-main">
-        {/* Identity block */}
-        <section className="pp-identity">
-          <div className="pp-identity-top">
-            <Avatar src={profile?.avatarUrl} name={profile?.name} size={76} />
-            <div className="pp-stats">
-              <div className="pp-stat">
-                <strong>{posts.length}</strong>
-                <span>posts</span>
+      <main className="profile-scroll-area">
+        {/* Profile Card */}
+        <div className="profile-hero-card">
+          <div className="hero-top" style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="portrait-wrapper"
+              style={{ position: 'relative' }}
+            >
+              <Avatar src={profile?.avatarUrl} name={profile?.name} size={90} />
+              {profile?.studyStreak > 0 && (
+                <div className="streak-badge">
+                  <Flame size={14} fill="#f97316" />
+                  <span>{profile.studyStreak} Vibe</span>
+                </div>
+              )}
+            </motion.div>
+
+            <div className="hero-right" style={{ flex: 1, paddingTop: '4px' }}>
+              <div style={{ fontSize: 18, fontWeight: 500, marginBottom: 16 }}>
+                {profile?.name?.split(' ')[0]}
               </div>
-              <div className="pp-stat">
-                <strong>{profile?.followers?.length || 0}</strong>
-                <span>followers</span>
-              </div>
-              <div className="pp-stat">
-                <strong>{profile?.following?.length || 0}</strong>
-                <span>following</span>
+              <div className="hero-stats" style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
+                <div className="stat-box">
+                  <span className="stat-val">{posts.length}</span>
+                  <span className="stat-lbl">posts</span>
+                </div>
+                <div className="stat-box">
+                  <span className="stat-val">{profile?.followers?.length || 0}</span>
+                  <span className="stat-lbl">followers</span>
+                </div>
+                <div className="stat-box">
+                  <span className="stat-val">{profile?.following?.length || 0}</span>
+                  <span className="stat-lbl">following</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="pp-name-row">
-            <h1 className="pp-name">{profile?.name}</h1>
-            {profile?.studyStreak > 0 && (
-              <span className="pp-streak">
-                <Flame size={12} /> {profile.studyStreak}-day streak
-              </span>
+          <div className="hero-bio-section" style={{ marginTop: '20px' }}>
+            <h2 className="display-name" style={{ fontSize: 16, fontWeight: 600, marginBottom: '4px' }}>{profile?.name}</h2>
+            {profile?.bio && <div className="bio-text" style={{ whiteSpace: 'pre-line', fontSize: 15, lineHeight: 1.4, margin: '4px 0 16px 0', color: 'rgba(255,255,255,0.9)' }}>{profile.bio}</div>}
+            {!profile?.bio && (
+              <div className="title-tag">
+                <GraduationCap size={14} />
+                <span>{BRAND.memberTitle}</span>
+              </div>
+            )}
+            
+            {profile?.skills && profile.skills.length > 0 && (
+              <div className="skill-cloud">
+                {profile.skills.map(s => (
+                  <span key={s} className="skill-pill">{s}</span>
+                ))}
+              </div>
             )}
           </div>
 
-          {profile?.bio ? (
-            <p className="pp-bio">{profile.bio}</p>
-          ) : (
-            <p className="pp-bio pp-bio-empty">{BRAND.memberTitle} · no bio yet</p>
-          )}
-
-          {profile?.skills?.length > 0 && (
-            <div className="pp-subjects">
-              {profile.skills.map((s) => (
-                <span key={s} className="pp-subject">
-                  {s}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="pp-actions">
+          <div className="hero-actions" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {isOwnProfile ? (
-              <button className="btn-outline" onClick={() => navigate('/profile/edit')}>
-                Edit profile
-              </button>
-            ) : (
               <>
-                <button
-                  className={isFollowing ? 'btn-outline' : 'btn-primary'}
+                <button className="pill-outline-btn" style={{ alignSelf: 'flex-start' }}>
+                  <Plus size={16} /> Add banners
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="pill-btn-dark" onClick={() => navigate('/profile/edit')} style={{ flex: 1 }}>
+                    Edit profile
+                  </button>
+                  <button className="pill-btn-dark" style={{ flex: 1 }}>
+                    Share profile
+                  </button>
+                  <button className="pill-btn-icon-dark">
+                    <UserPlus size={18} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="action-button-row" style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  className={isFollowing ? "pill-btn-dark" : "pill-btn-primary"} 
                   onClick={handleFollow}
+                  style={{ flex: 2 }}
                 >
                   {isFollowing ? 'Following' : 'Follow'}
                 </button>
-                <button
-                  className="btn-outline"
-                  onClick={() => navigate(`/chat/${userId}`)}
-                  aria-label="Message"
-                >
-                  <MessageCircle size={16} />
+                <button className="pill-btn-dark" onClick={() => navigate(`/chat/${userId}`)} style={{ flex: 1 }}>
+                  <MessageCircle size={18} />
                 </button>
-              </>
+                <button className="pill-btn-dark" onClick={() => navigate(`/partner-chat/${userId}`)} style={{ flex: 1, color: '#ec4899' }}>
+                  <Heart size={18} />
+                </button>
+              </div>
             )}
           </div>
-        </section>
-
-        {/* Content */}
-        <div className="pp-tabs">
-          <button
-            className={`pp-tab ${activeTab === 'posts' ? 'active' : ''}`}
-            onClick={() => setActiveTab('posts')}
-          >
-            <Grid3X3 size={15} /> Posts
-          </button>
-          <button
-            className={`pp-tab ${activeTab === 'reels' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reels')}
-          >
-            <Film size={15} /> Reels
-          </button>
         </div>
 
-        <div className="pp-content">
-          <AnimatePresence mode="wait">
+        {/* Content Section */}
+        <div className="profile-content-grid">
+          <div className="section-tab-header">
+            <button className={`tab-btn ${activeTab === 'posts' ? 'active-tab' : ''}`} onClick={() => setActiveTab('posts')}>
+              <Grid3X3 size={18} />
+              <span>{BRAND.feedTitle}</span>
+            </button>
+            <button className={`tab-btn ${activeTab === 'reels' ? 'active-tab' : ''}`} onClick={() => setActiveTab('reels')}>
+              <Film size={18} />
+              <span>Reels</span>
+            </button>
+          </div>
+
+          <div className="posts-stack">
             {activeTab === 'posts' && (
-              <motion.div
-                key="posts"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.12 }}
-                className="pp-post-list"
-              >
-                {posts.length === 0 ? (
-                  <EmptyState
-                    icon={Grid3X3}
-                    title="No posts yet"
-                    description={
-                      isOwnProfile
-                        ? 'Share a question or some notes — it shows up on your profile.'
-                        : 'When they post, it shows up here.'
-                    }
-                    actionLabel={isOwnProfile ? 'Write something' : undefined}
-                    onAction={isOwnProfile ? () => navigate('/create') : undefined}
-                  />
-                ) : (
-                  posts.map((post) => (
-                    <PostCard key={post._id} post={post} onUpdate={loadProfile} />
-                  ))
-                )}
-              </motion.div>
+              posts.length === 0 ? (
+              <div className="empty-portfolio">
+                <Grid3X3 size={40} />
+                <p>No moments shared yet.</p>
+              </div>
+            ) : (
+              posts.map((post, i) => (
+                <motion.div 
+                  key={post._id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <PostCard post={post} onUpdate={loadProfile} />
+                </motion.div>
+              ))
+              )
             )}
 
             {activeTab === 'reels' && (
-              <motion.div
-                key="reels"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.12 }}
-              >
-                {reels.length === 0 ? (
-                  <EmptyState
-                    icon={Film}
-                    title="No reels yet"
-                    description="Short videos posted by this account will appear here."
-                  />
-                ) : (
-                  <div className="pp-reel-grid">
-                    {reels.map((reel) => (
-                      <button
-                        key={reel._id}
-                        className="pp-reel-thumb"
-                        onClick={() => navigate('/reels')}
-                        aria-label="Open reel"
-                      >
-                        <video src={api.getFileUrl(reel.videoUrl)} preload="metadata" />
-                        <span className="pp-reel-icon">
-                          <Film size={18} />
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
+              reels.length === 0 ? (
+                <div className="empty-portfolio">
+                  <Film size={40} />
+                  <p>No reels captured yet.</p>
+                </div>
+              ) : (
+                <div className="reels-grid-profile">
+                  {reels.map((reel, i) => (
+                    <motion.div 
+                      key={reel._id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="profile-reel-thumbnail"
+                      onClick={() => navigate('/reels')}
+                    >
+                      <video src={api.getFileUrl(reel.videoUrl)} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                      <div className="reel-thumbnail-icon">
+                         <Film size={24} color="white" />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )
             )}
-          </AnimatePresence>
+          </div>
         </div>
       </main>
 
+
       <style>{`
-        .pp-root {
+        .premium-profile-layout {
+          background: #000000;
           min-height: 100vh;
-          padding-bottom: calc(var(--bottom-nav-height) + 24px);
+          position: relative;
+          color: white;
+          padding-bottom: 90px;
         }
-        .pp-header {
+
+        .profile-banner-mesh {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 240px;
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%);
+          filter: blur(60px);
+          z-index: 0;
+        }
+
+        .profile-glass-header {
           position: sticky;
           top: 0;
-          z-index: 100;
-          background: var(--bg-primary);
-          border-bottom: 1px solid var(--border-color);
-        }
-        .pp-header-inner {
-          max-width: 640px;
-          margin: 0 auto;
-          height: 52px;
+          height: 64px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0 16px;
+          padding: 0 20px;
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(12px);
+          z-index: 100;
         }
-        .pp-header-name {
-          font-size: 14px;
-          font-weight: 600;
-          color: var(--text-primary);
+
+        .header-username {
+          font-size: 15px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
         }
-        .pp-header-btn {
-          width: 34px;
-          height: 34px;
+
+        .profile-scroll-area {
+          position: relative;
+          z-index: 10;
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 0;
+        }
+
+        .profile-hero-card {
+          background: #0f1115;
+          padding: 20px 16px;
+        }
+
+        .hero-top {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 24px;
+        }
+
+        .portrait-wrapper {
+          position: relative;
+        }
+        .vibe-bubble {
+          position: absolute;
+          top: -30px;
+          left: -10px;
+          background: #2a2c33;
+          color: rgba(255,255,255,0.7);
+          font-size: 11px;
+          padding: 8px 12px;
+          border-radius: 16px;
+          z-index: 20;
+          white-space: nowrap;
+          text-align: center;
+          line-height: 1.2;
+        }
+        .vibe-bubble::after {
+          content: '';
+          position: absolute;
+          bottom: -6px;
+          right: 20px;
+          width: 0;
+          height: 0;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 6px solid #2a2c33;
+        }
+        .story-ring-profile {
+          padding: 4px;
+          border-radius: 50%;
+          transition: transform 0.2s;
+        }
+        .story-ring-profile:hover {
+          transform: scale(1.02);
+        }
+        .story-ring-profile.has-story {
+          background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        }
+        .add-story-btn {
+          position: absolute;
+          bottom: 2px;
+          right: 2px;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: white;
+          border: 2px solid #0f1115;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: var(--radius-md);
-          color: var(--text-secondary);
+          cursor: pointer;
+          transition: transform 0.2s;
         }
-        .pp-header-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
-        .pp-main {
-          max-width: 640px;
-          margin: 0 auto;
-          padding: 24px 16px 0;
+        .add-story-btn:hover {
+          transform: scale(1.1);
         }
-        .pp-identity { padding-bottom: 22px; }
-        .pp-identity-top {
+        .streak-badge {
+          position: absolute;
+          bottom: -4px;
+          right: -4px;
+          background: black;
+          border: 1px solid #f97316;
+          border-radius: 12px;
+          padding: 2px 8px;
           display: flex;
-          align-items: center;
-          gap: 22px;
-          margin-bottom: 16px;
-        }
-        .pp-stats {
-          display: flex;
-          gap: 28px;
-        }
-        .pp-stat { display: flex; flex-direction: column; }
-        .pp-stat strong { font-size: 17px; font-weight: 600; }
-        .pp-stat span { font-size: 12.5px; color: var(--text-muted); }
-        .pp-name-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 4px;
-        }
-        .pp-name {
-          font-family: var(--font-display);
-          font-size: 24px;
-          font-weight: 500;
-          letter-spacing: -0.01em;
-        }
-        .pp-streak {
-          display: inline-flex;
           align-items: center;
           gap: 4px;
-          font-size: 12px;
-          font-weight: 500;
-          color: var(--warning);
+          font-size: 11px;
+          font-weight: 800;
         }
-        .pp-bio {
-          font-size: 14px;
-          line-height: 1.6;
-          color: var(--text-secondary);
-          white-space: pre-line;
-          margin-bottom: 12px;
-          max-width: 480px;
-        }
-        .pp-bio-empty { color: var(--text-muted); font-style: italic; }
-        .pp-subjects {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          margin-bottom: 16px;
-        }
-        .pp-subject {
-          font-size: 12px;
-          color: var(--text-secondary);
-          border: 1px solid var(--border-color);
-          padding: 3px 9px;
-          border-radius: var(--radius-sm);
-        }
-        .pp-actions {
-          display: flex;
-          gap: 8px;
-          padding-top: 4px;
-        }
-        .pp-tabs {
-          display: flex;
-          border-top: 1px solid var(--border-color);
-          border-bottom: 1px solid var(--border-color);
-          margin-bottom: 20px;
-        }
-        .pp-tab {
+
+        .hero-stats {
           flex: 1;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          padding: 12px 0;
-          font-size: 13.5px;
-          font-weight: 500;
-          color: var(--text-muted);
-          border-bottom: 2px solid transparent;
-          margin-bottom: -1px;
-          transition: color 0.12s;
+          justify-content: space-around;
         }
-        .pp-tab:hover { color: var(--text-secondary); }
-        .pp-tab.active {
-          color: var(--text-primary);
-          border-bottom-color: var(--accent);
-        }
-        .pp-post-list {
+        .stat-box {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          align-items: flex-start;
+          gap: 2px;
         }
-        .pp-reel-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 4px;
+        .stat-val {
+          font-size: 16px;
+          font-weight: 600;
         }
-        .pp-reel-thumb {
-          aspect-ratio: 9 / 16;
-          background: var(--bg-tertiary);
-          position: relative;
-          overflow: hidden;
-          border: none;
-          padding: 0;
+        .stat-lbl {
+          font-size: 15px;
+          color: rgba(255, 255, 255, 0.9);
+          letter-spacing: 0px;
+          text-transform: none;
+        }
+
+        .hero-bio-section {
+          margin-bottom: 24px;
+        }
+        .display-name {
+          font-size: 24px;
+          font-weight: 800;
+          margin-bottom: 4px;
+        }
+        .title-tag {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          color: #a78bfa;
+          margin-bottom: 12px;
+        }
+        .bio-text {
+          font-size: 15px;
+          line-height: 1.6;
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 16px;
+        }
+
+        .skill-cloud {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .skill-pill {
+          background: rgba(255, 255, 255, 0.05);
+          padding: 6px 14px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .hero-actions {
+          display: flex;
+          gap: 12px;
+        }
+        .pill-outline-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          background: transparent;
+          color: rgba(255,255,255,0.7);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 500;
           cursor: pointer;
         }
-        .pp-reel-thumb video {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+        .pill-btn-dark {
+          padding: 8px 16px;
+          background: #2a2c33;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: background 0.2s;
         }
-        .pp-reel-icon {
+        .pill-btn-icon-dark {
+          padding: 0 12px;
+          background: #2a2c33;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+        .pill-btn-primary {
+          padding: 8px 16px;
+          background: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+        }
+        .pill-btn-dark:hover, .pill-outline-btn:hover {
+          background: rgba(255,255,255,0.1);
+        }
+
+        .section-tab-header {
+          display: flex;
+          justify-content: center;
+          gap: 40px;
+          padding: 24px 0 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          margin-bottom: 20px;
+        }
+        .tab-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          color: rgba(255,255,255,0.5);
+          padding: 12px 16px;
+          background: none;
+          border: none;
+          border-bottom: 2px solid transparent;
+          cursor: pointer;
+          text-transform: uppercase;
+        }
+        .tab-btn.active-tab {
+          color: white;
+          border-bottom: 2px solid white;
+        }
+        .reels-grid-profile {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+        }
+        .profile-reel-thumbnail {
+          aspect-ratio: 9/16;
+          border-radius: 12px;
+          overflow: hidden;
+          background: rgba(255,255,255,0.05);
+          position: relative;
+          cursor: pointer;
+        }
+        .profile-reel-thumbnail video {
+          transition: transform 0.3s;
+        }
+        .profile-reel-thumbnail:hover video {
+          transform: scale(1.05);
+        }
+        .reel-thumbnail-icon {
           position: absolute;
           inset: 0;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--text-primary);
-          background: rgba(10, 8, 5, 0.25);
+          background: rgba(0,0,0,0.2);
           opacity: 0;
-          transition: opacity 0.15s;
+          transition: opacity 0.2s;
         }
-        .pp-reel-thumb:hover .pp-reel-icon { opacity: 1; }
-        @media (min-width: 480px) {
-          .pp-reel-grid { gap: 6px; }
+        .profile-reel-thumbnail:hover .reel-thumbnail-icon {
+          opacity: 1;
+        }
+
+        .posts-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .empty-portfolio {
+          text-align: center;
+          padding: 40px;
+          color: rgba(255, 255, 255, 0.3);
         }
       `}</style>
     </div>

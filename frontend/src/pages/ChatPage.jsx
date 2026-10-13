@@ -5,18 +5,7 @@ import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import { getSocket } from '../lib/socket';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import {
-  ArrowLeft,
-  Send,
-  Smile,
-  Image as ImageIcon,
-  Video as VideoIcon,
-  X,
-  MoreVertical,
-  Reply,
-  Edit2,
-  Trash2,
-} from 'lucide-react';
+import { ArrowLeft, Send, Smile, Image as ImageIcon, Video as VideoIcon, X, MoreVertical, Reply, Edit2, Trash2 } from 'lucide-react';
 
 export default function ChatPage() {
   const { userId } = useParams();
@@ -33,7 +22,7 @@ export default function ChatPage() {
   const [mediaPreview, setMediaPreview] = useState('');
   const [mediaType, setMediaType] = useState('');
   const [showMenu, setShowMenu] = useState(false);
-
+  
   // Reply & Edit State
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMsg, setEditingMsg] = useState(null);
@@ -48,12 +37,9 @@ export default function ChatPage() {
     const socket = getSocket();
 
     socket.on('new_message', (data) => {
-      if (
-        data.message &&
-        String(data.message.sender?._id || data.message.sender) !== String(user?._id)
-      ) {
-        setMessages((prev) => {
-          if (data.message._id && prev.some((m) => m._id === data.message._id)) return prev;
+      if (data.message && String(data.message.sender?._id || data.message.sender) !== String(user?._id)) {
+        setMessages(prev => {
+          if (data.message._id && prev.some(m => m._id === data.message._id)) return prev;
           return [...prev, data.message];
         });
         scrollToBottom();
@@ -61,17 +47,11 @@ export default function ChatPage() {
     });
 
     socket.on('message_edited', (data) => {
-      setMessages((prev) => prev.map((m) => (m._id === data.message._id ? data.message : m)));
+        setMessages(prev => prev.map(m => m._id === data.message._id ? data.message : m));
     });
 
     socket.on('message_deleted', (data) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m._id === data.messageId
-            ? { ...m, isDeleted: true, content: 'This message was deleted', mediaUrl: '' }
-            : m
-        )
-      );
+        setMessages(prev => prev.map(m => m._id === data.messageId ? { ...m, isDeleted: true, content: 'This message was deleted', mediaUrl: '' } : m));
     });
 
     socket.on('user_typing', ({ userId: uid, isTyping }) => {
@@ -91,11 +71,11 @@ export default function ChatPage() {
       setError('');
       const data = await api.get(`/api/chat/${userId}`);
       setChat(data);
-      const partnerUser = data.participants?.find((p) => String(p._id || p) !== String(user?._id));
+      const partnerUser = data.participants?.find(p => String(p._id || p) !== String(user?._id));
       setPartner(partnerUser);
       setMessages(Array.isArray(data.messages) ? data.messages : []);
     } catch (err) {
-      console.error('Failed to load chat:', err);
+      console.error("Failed to load chat:", err);
       setError('Could not load chat. Please try again.');
     }
     setLoading(false);
@@ -104,9 +84,9 @@ export default function ChatPage() {
 
   const scrollToBottom = (instant = false) => {
     if (!messagesEndRef.current) return;
-    messagesEndRef.current.scrollIntoView({
-      behavior: instant ? 'auto' : 'smooth',
-      block: 'end',
+    messagesEndRef.current.scrollIntoView({ 
+      behavior: instant ? 'auto' : 'smooth', 
+      block: 'end' 
     });
   };
 
@@ -119,7 +99,7 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     if (!input.trim() && !mediaFile) return;
-
+    
     // Maintain focus to prevent keyboard from closing
     if (inputRef.current) inputRef.current.focus();
 
@@ -134,15 +114,9 @@ export default function ChatPage() {
 
     try {
       if (isEditing) {
-        const updated = await api.put(`/api/chat/${chat._id}/message/${editingMsg._id}`, {
-          content,
-        });
-        setMessages((prev) => prev.map((m) => (m._id === editingMsg._id ? updated : m)));
-        getSocket().emit('edit_message', {
-          receiverId: userId,
-          message: updated,
-          chatId: chat._id,
-        });
+        const updated = await api.put(`/api/chat/${chat._id}/message/${editingMsg._id}`, { content });
+        setMessages(prev => prev.map(m => m._id === editingMsg._id ? updated : m));
+        getSocket().emit('edit_message', { receiverId: userId, message: updated, chatId: chat._id });
         setInput('');
       } else {
         let mediaUrl = '';
@@ -150,28 +124,21 @@ export default function ChatPage() {
         if (mediaFile) {
           const fd = new FormData();
           fd.append('file', mediaFile);
-          const up = await api.upload(
-            mediaType === 'video' ? '/api/upload/video/chat' : '/api/upload/image/chat',
-            fd
-          );
+          const up = await api.upload(mediaType === 'video' ? '/api/upload/video/chat' : '/api/upload/image/chat', fd);
           mediaUrl = up.url;
           message_type = mediaType === 'video' ? 'video' : 'image';
         }
-
-        const msg = await api.post('/api/chat/send', {
-          content,
-          receiverId: userId,
-          message_type,
-          mediaUrl,
-          replyToId: currentReplyTo?._id,
+        
+        const msg = await api.post('/api/chat/send', { 
+            content, 
+            receiverId: userId, 
+            message_type, 
+            mediaUrl,
+            replyToId: currentReplyTo?._id
         });
-
-        setMessages((prev) => [...prev, msg]);
-        getSocket().emit('private_message', {
-          receiverId: userId,
-          message: msg,
-          chatId: chat?._id,
-        });
+        
+        setMessages(prev => [...prev, msg]);
+        getSocket().emit('private_message', { receiverId: userId, message: msg, chatId: chat?._id });
         setMediaFile(null);
         setMediaPreview('');
         setMediaType('');
@@ -194,22 +161,12 @@ export default function ChatPage() {
   const handleDeleteMsg = async (msgId) => {
     if (!window.confirm('Delete this message?')) return;
     try {
-      await api.delete(`/api/chat/${chat._id}/message/${msgId}`);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m._id === msgId
-            ? { ...m, isDeleted: true, content: 'This message was deleted', mediaUrl: '' }
-            : m
-        )
-      );
-      getSocket().emit('delete_message', {
-        receiverId: userId,
-        messageId: msgId,
-        chatId: chat._id,
-      });
-      setSelectedMsgId(null);
+        await api.delete(`/api/chat/${chat._id}/message/${msgId}`);
+        setMessages(prev => prev.map(m => m._id === msgId ? { ...m, isDeleted: true, content: 'This message was deleted', mediaUrl: '' } : m));
+        getSocket().emit('delete_message', { receiverId: userId, messageId: msgId, chatId: chat._id });
+        setSelectedMsgId(null);
     } catch (e) {
-      setError('Failed to delete message');
+        setError('Failed to delete message');
     }
   };
 
@@ -240,7 +197,7 @@ export default function ChatPage() {
         <button className="back-btn-v2" onClick={() => navigate('/chat')}>
           <ArrowLeft size={20} />
         </button>
-
+        
         <div className="partner-info-v2" onClick={() => navigate(`/profile/${userId}`)}>
           <Avatar src={partner?.avatarUrl} name={partner?.name} size={40} />
           <div className="partner-text-v2">
@@ -254,24 +211,21 @@ export default function ChatPage() {
         <button className="more-btn-v2" onClick={() => setShowMenu(!showMenu)}>
           <MoreVertical size={20} />
         </button>
-
+        
         <AnimatePresence>
           {showMenu && (
-            <motion.div
+            <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -10 }}
               className="chat-menu-v2"
             >
-              <button
-                onClick={async () => {
-                  if (window.confirm('Delete conversation?')) {
-                    await api.delete(`/api/chat/${chat._id}`);
-                    navigate('/chat');
-                  }
-                }}
-                className="menu-item-v2 delete"
-              >
+              <button onClick={async () => {
+                if (window.confirm('Delete conversation?')) {
+                  await api.delete(`/api/chat/${chat._id}`);
+                  navigate('/chat');
+                }
+              }} className="menu-item-v2 delete">
                 Delete Conversation
               </button>
             </motion.div>
@@ -292,25 +246,17 @@ export default function ChatPage() {
         {messages.map((msg, i) => {
           const isMine = String(msg.sender?._id || msg.sender) === String(user?._id);
           const isSelected = selectedMsgId === msg._id;
-          const replyMsg = msg.replyTo
-            ? typeof msg.replyTo === 'object'
-              ? msg.replyTo
-              : messages.find((m) => m._id === msg.replyTo)
-            : null;
-
+          const replyMsg = msg.replyTo ? (typeof msg.replyTo === 'object' ? msg.replyTo : messages.find(m => m._id === msg.replyTo)) : null;
+          
           return (
-            <MessageBubble
+            <MessageBubble 
               key={msg._id || i}
               msg={msg}
               replyMsg={replyMsg}
               isMine={isMine}
               isSelected={isSelected}
               onSelect={() => setSelectedMsgId(isSelected ? null : msg._id)}
-              onReply={() => {
-                setReplyingTo(msg);
-                setEditingMsg(null);
-                if (inputRef.current) inputRef.current.focus();
-              }}
+              onReply={() => { setReplyingTo(msg); setEditingMsg(null); if (inputRef.current) inputRef.current.focus(); }}
               onEdit={() => handleEdit(msg)}
               onDelete={() => handleDeleteMsg(msg._id)}
               formatTime={formatTime}
@@ -325,7 +271,7 @@ export default function ChatPage() {
         {/* Reply/Edit Preview */}
         <AnimatePresence>
           {(replyingTo || editingMsg) && (
-            <motion.div
+            <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
@@ -336,20 +282,11 @@ export default function ChatPage() {
               </div>
               <div className="context-content-v2">
                 <span className="context-label-v2">
-                  {replyingTo
-                    ? `Replying to ${replyingTo.sender?.name || 'Partner'}`
-                    : 'Editing message'}
+                  {replyingTo ? `Replying to ${replyingTo.sender?.name || 'Partner'}` : 'Editing message'}
                 </span>
                 <p className="context-text-v2">{replyingTo?.content || editingMsg?.content}</p>
               </div>
-              <button
-                className="context-close-v2"
-                onClick={() => {
-                  setReplyingTo(null);
-                  setEditingMsg(null);
-                  if (!editingMsg) setInput('');
-                }}
-              >
+              <button className="context-close-v2" onClick={() => { setReplyingTo(null); setEditingMsg(null); if (!editingMsg) setInput(''); }}>
                 <X size={16} />
               </button>
             </motion.div>
@@ -360,13 +297,7 @@ export default function ChatPage() {
           <div className="media-preview-v2">
             <div className="media-preview-box-v2">
               {mediaType === 'video' ? <video src={mediaPreview} /> : <img src={mediaPreview} />}
-              <button
-                className="remove-media-v2"
-                onClick={() => {
-                  setMediaFile(null);
-                  setMediaPreview('');
-                }}
-              >
+              <button className="remove-media-v2" onClick={() => { setMediaFile(null); setMediaPreview(''); }}>
                 <X size={14} />
               </button>
             </div>
@@ -377,21 +308,11 @@ export default function ChatPage() {
           <div className="input-actions-v2">
             <label className="action-btn-v2">
               <ImageIcon size={20} />
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={(e) => onPickMedia(e.target.files[0])}
-              />
+              <input type="file" accept="image/*" hidden onChange={e => onPickMedia(e.target.files[0])} />
             </label>
             <label className="action-btn-v2">
               <VideoIcon size={20} />
-              <input
-                type="file"
-                accept="video/*"
-                hidden
-                onChange={(e) => onPickMedia(e.target.files[0])}
-              />
+              <input type="file" accept="video/*" hidden onChange={e => onPickMedia(e.target.files[0])} />
             </label>
           </div>
 
@@ -417,8 +338,8 @@ export default function ChatPage() {
             />
           </div>
 
-          <button
-            className="send-btn-v2"
+          <button 
+            className="send-btn-v2" 
             onClick={handleSend}
             disabled={!input.trim() && !mediaFile}
           >
@@ -435,7 +356,7 @@ export default function ChatPage() {
           display: flex;
           flex-direction: column;
           background: rgba(0,0,0,0.4);
-          
+          backdrop-filter: blur(20px);
           color: white;
           font-family: 'Inter', sans-serif;
           border-left: 1px solid rgba(255,255,255,0.05);
@@ -447,7 +368,7 @@ export default function ChatPage() {
           align-items: center;
           padding: 12px 16px;
           background: rgba(0,0,0,0.8);
-          
+          backdrop-filter: blur(20px);
           border-bottom: 1px solid rgba(255,255,255,0.08);
           z-index: 100;
         }
@@ -479,7 +400,7 @@ export default function ChatPage() {
           font-size: 11px;
           color: rgba(255,255,255,0.4);
         }
-        .status-v2.typing { color: var(--text-muted); }
+        .status-v2.typing { color: #22d3ee; }
 
         .chat-menu-v2 {
           position: absolute;
@@ -552,7 +473,7 @@ export default function ChatPage() {
           transition: transform 0.2s;
         }
         .bubble-v2.mine {
-          background: var(--accent);
+          background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
           color: white;
           border-bottom-right-radius: 4px;
         }
@@ -720,17 +641,7 @@ export default function ChatPage() {
   );
 }
 
-function MessageBubble({
-  msg,
-  replyMsg,
-  isMine,
-  isSelected,
-  onSelect,
-  onReply,
-  onEdit,
-  onDelete,
-  formatTime,
-}) {
+function MessageBubble({ msg, replyMsg, isMine, isSelected, onSelect, onReply, onEdit, onDelete, formatTime }) {
   const x = useMotionValue(0);
   const opacity = useTransform(x, [0, 60], [0, 1]);
   const scale = useTransform(x, [0, 60], [0.8, 1]);
@@ -742,27 +653,27 @@ function MessageBubble({
         dragConstraints={{ left: 0, right: 80 }}
         dragElastic={0.2}
         onDragEnd={(e, info) => {
-          if (info.offset.x > 50) onReply();
+            if (info.offset.x > 50) onReply();
         }}
         style={{ x }}
         className={`bubble-v2 ${isMine ? 'mine' : 'theirs'} ${msg.isDeleted ? 'deleted' : ''}`}
         onClick={onSelect}
       >
         {/* Reply Indicator on Drag */}
-        <motion.div
-          style={{ position: 'absolute', left: -40, top: '50%', y: '-50%', opacity, scale }}
-          className="swipe-reply-icon"
+        <motion.div 
+            style={{ position: 'absolute', left: -40, top: '50%', y: '-50%', opacity, scale }}
+            className="swipe-reply-icon"
         >
-          <Reply size={18} color="#6366f1" />
+            <Reply size={18} color="#6366f1" />
         </motion.div>
 
         {replyMsg && !msg.isDeleted && (
-          <div className="reply-context-bubble">
-            <span style={{ fontWeight: 700, fontSize: 10, display: 'block', marginBottom: 2 }}>
-              {replyMsg.sender?.name || 'Partner'}
-            </span>
-            <span style={{ opacity: 0.7 }}>{replyMsg.content || 'Media message'}</span>
-          </div>
+            <div className="reply-context-bubble">
+                <span style={{ fontWeight: 700, fontSize: 10, display: 'block', marginBottom: 2 }}>
+                    {replyMsg.sender?.name || 'Partner'}
+                </span>
+                <span style={{ opacity: 0.7 }}>{replyMsg.content || 'Media message'}</span>
+            </div>
         )}
 
         {msg.message_type === 'image' && msg.mediaUrl && !msg.isDeleted && (
@@ -771,9 +682,9 @@ function MessageBubble({
         {msg.message_type === 'video' && msg.mediaUrl && !msg.isDeleted && (
           <video src={api.getFileUrl(msg.mediaUrl)} className="msg-media-v2" controls />
         )}
-
+        
         <p style={{ margin: 0 }}>{msg.content}</p>
-
+        
         <div className="bubble-meta-v2">
           {msg.isEdited && <span>edited</span>}
           <span>{formatTime(msg.timestamp || msg.createdAt)}</span>
@@ -783,25 +694,15 @@ function MessageBubble({
       {/* Message Context Menu */}
       <AnimatePresence>
         {isSelected && !msg.isDeleted && (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 5 }}
             className="msg-actions-v2"
           >
-            <button className="msg-action-btn-v2" onClick={onReply}>
-              <Reply size={14} /> Reply
-            </button>
-            {isMine && (
-              <button className="msg-action-btn-v2" onClick={onEdit}>
-                <Edit2 size={14} /> Edit
-              </button>
-            )}
-            {isMine && (
-              <button className="msg-action-btn-v2" style={{ color: '#ef4444' }} onClick={onDelete}>
-                <Trash2 size={14} /> Delete
-              </button>
-            )}
+            <button className="msg-action-btn-v2" onClick={onReply}><Reply size={14} /> Reply</button>
+            {isMine && <button className="msg-action-btn-v2" onClick={onEdit}><Edit2 size={14} /> Edit</button>}
+            {isMine && <button className="msg-action-btn-v2" style={{ color: '#ef4444' }} onClick={onDelete}><Trash2 size={14} /> Delete</button>}
           </motion.div>
         )}
       </AnimatePresence>

@@ -5,74 +5,16 @@ import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import { getSocket } from '../lib/socket';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import {
-  ArrowLeft,
-  Send,
-  Smile,
-  Camera,
-  X,
-  Palette,
-  Clock,
-  ShieldCheck,
-  MoreVertical,
-  Reply,
-  Edit2,
-  Trash2,
-} from 'lucide-react';
+import { ArrowLeft, Send, Smile, Camera, X, Palette, Clock, ShieldCheck, MoreVertical, Reply, Edit2, Trash2 } from 'lucide-react';
 
 const THEMES = {
-  purple_dark: {
-    name: 'Purple dark',
-    bg: '#130d24',
-    msgBg: '#1e1535',
-    accent: 'var(--accent)',
-    inputBg: 'rgba(255,255,255,0.07)',
-  },
-  pink_gradient: {
-    name: 'Pink gradient',
-    bg: '#1f0f1a',
-    msgBg: '#3a1030',
-    accent: 'var(--accent)',
-    inputBg: 'rgba(255,255,255,0.07)',
-  },
-  blue_neon: {
-    name: 'Blue neon',
-    bg: '#090f1c',
-    msgBg: '#0c1e3a',
-    accent: '#0ea5e9',
-    inputBg: 'rgba(255,255,255,0.07)',
-  },
-  black_minimal: {
-    name: 'Black minimal',
-    bg: '#0a0a0a',
-    msgBg: '#1c1c1c',
-    accent: '#a3a3a3',
-    inputBg: 'rgba(255,255,255,0.06)',
-  },
+  purple_dark:  { name: 'Purple dark',  bg: '#130d24', msgBg: '#1e1535', accent: '#7c3aed', inputBg: 'rgba(255,255,255,0.07)' },
+  pink_gradient:{ name: 'Pink gradient',bg: '#1f0f1a', msgBg: '#3a1030', accent: '#ec4899', inputBg: 'rgba(255,255,255,0.07)' },
+  blue_neon:    { name: 'Blue neon',    bg: '#090f1c', msgBg: '#0c1e3a', accent: '#0ea5e9', inputBg: 'rgba(255,255,255,0.07)' },
+  black_minimal:{ name: 'Black minimal',bg: '#0a0a0a', msgBg: '#1c1c1c', accent: '#a3a3a3', inputBg: 'rgba(255,255,255,0.06)' },
 };
 
-const EMOJIS = [
-  '❤️',
-  '😍',
-  '🔥',
-  '💕',
-  '😘',
-  '🥰',
-  '💖',
-  '😊',
-  '🤗',
-  '💜',
-  '✨',
-  '🌙',
-  '💫',
-  '🦋',
-  '🌸',
-  '💝',
-  '😈',
-  '🙈',
-  '💋',
-  '🫶',
-];
+const EMOJIS = ['❤️','😍','🔥','💕','😘','🥰','💖','😊','🤗','💜','✨','🌙','💫','🦋','🌸','💝','😈','🙈','💋','🫶'];
 
 export default function PartnerChatPage() {
   const { partnerId } = useParams();
@@ -104,7 +46,7 @@ export default function PartnerChatPage() {
   const inputRef = useRef(null);
 
   useEffect(() => {
-    const id = setInterval(() => forceUpdate((n) => n + 1), 60_000);
+    const id = setInterval(() => forceUpdate(n => n + 1), 60_000);
     return () => clearInterval(id);
   }, []);
 
@@ -120,8 +62,8 @@ export default function PartnerChatPage() {
     socket.on('partner_new_message', (msg) => {
       const sid = msg.sender_id?._id || msg.sender_id;
       if (String(sid) !== String(user?._id)) {
-        setMessages((prev) => {
-          if (msg._id && prev.some((m) => m._id === msg._id)) return prev;
+        setMessages(prev => {
+          if (msg._id && prev.some(m => m._id === msg._id)) return prev;
           return [...prev, msg];
         });
         scrollToBottom();
@@ -129,17 +71,11 @@ export default function PartnerChatPage() {
     });
 
     socket.on('partner_message_edited', (msg) => {
-      setMessages((prev) => prev.map((m) => (m._id === msg._id ? msg : m)));
+        setMessages(prev => prev.map(m => m._id === msg._id ? msg : m));
     });
 
     socket.on('partner_message_deleted', (data) => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m._id === data.messageId
-            ? { ...m, isDeleted: true, content: 'This message was deleted', image_url: '' }
-            : m
-        )
-      );
+        setMessages(prev => prev.map(m => m._id === data.messageId ? { ...m, isDeleted: true, content: 'This message was deleted', image_url: '' } : m));
     });
 
     socket.on('partner_user_typing', ({ userId, isTyping }) => {
@@ -168,14 +104,15 @@ export default function PartnerChatPage() {
       if (chatData.theme?.theme_name && THEMES[chatData.theme.theme_name]) {
         setTheme(chatData.theme.theme_name);
       }
-      const p =
-        chatData.user_one_id?._id === user?._id ? chatData.user_two_id : chatData.user_one_id;
+      const p = chatData.user_one_id?._id === user?._id
+        ? chatData.user_two_id
+        : chatData.user_one_id;
       setPartner(p);
 
       const msgs = await api.get(`/api/partner-chat/${chatData._id}/messages`);
       setMessages(Array.isArray(msgs) ? msgs : []);
     } catch (err) {
-      console.error('Failed to load partner chat:', err);
+      console.error("Failed to load partner chat:", err);
     }
     setLoading(false);
     setTimeout(scrollToBottom, 200);
@@ -183,9 +120,9 @@ export default function PartnerChatPage() {
 
   const scrollToBottom = (instant = false) => {
     if (!messagesEndRef.current) return;
-    messagesEndRef.current.scrollIntoView({
-      behavior: instant ? 'auto' : 'smooth',
-      block: 'end',
+    messagesEndRef.current.scrollIntoView({ 
+      behavior: instant ? 'auto' : 'smooth', 
+      block: 'end' 
     });
   };
 
@@ -198,7 +135,7 @@ export default function PartnerChatPage() {
 
   const handleSend = async () => {
     if ((!input.trim() && !imageFile) || !chat?._id || sending) return;
-
+    
     if (inputRef.current) inputRef.current.focus();
 
     setSending(true);
@@ -213,7 +150,7 @@ export default function PartnerChatPage() {
     try {
       if (isEditing) {
         const updated = await api.put(`/api/partner-chat/message/${editingMsg._id}`, { content });
-        setMessages((prev) => prev.map((m) => (m._id === editingMsg._id ? updated : m)));
+        setMessages(prev => prev.map(m => m._id === editingMsg._id ? updated : m));
         getSocket().emit('partner_message_edited', { chatId: chat._id, message: updated });
         setInput('');
       } else {
@@ -232,10 +169,10 @@ export default function PartnerChatPage() {
           message_type: image_url ? 'image' : 'text',
           image_url,
           cloudinary_public_id,
-          replyToId: currentReplyTo?._id,
+          replyToId: currentReplyTo?._id
         });
 
-        setMessages((prev) => [...prev, msg]);
+        setMessages(prev => [...prev, msg]);
         setImageFile(null);
         setImagePreview('');
         setShowImageModal(false);
@@ -261,18 +198,12 @@ export default function PartnerChatPage() {
   const handleDeleteMsg = async (msgId) => {
     if (!window.confirm('Delete this private message?')) return;
     try {
-      await api.delete(`/api/partner-chat/message/${msgId}`);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m._id === msgId
-            ? { ...m, isDeleted: true, content: 'This message was deleted', image_url: '' }
-            : m
-        )
-      );
-      getSocket().emit('partner_message_deleted', { chatId: chat._id, messageId: msgId });
-      setSelectedMsgId(null);
+        await api.delete(`/api/partner-chat/message/${msgId}`);
+        setMessages(prev => prev.map(m => m._id === msgId ? { ...m, isDeleted: true, content: 'This message was deleted', image_url: '' } : m));
+        getSocket().emit('partner_message_deleted', { chatId: chat._id, messageId: msgId });
+        setSelectedMsgId(null);
     } catch (e) {
-      console.error(e);
+        console.error(e);
     }
   };
 
@@ -335,24 +266,15 @@ export default function PartnerChatPage() {
           <div className="pc-header-text">
             <div className="pc-header-name">
               {partner?.name || 'Partner'}
-              <span className="pc-private-badge">
-                <ShieldCheck size={10} /> Private
-              </span>
+              <span className="pc-private-badge"><ShieldCheck size={10} /> Private</span>
             </div>
-            <div
-              className="pc-header-sub"
-              style={{ color: typing ? '#4ade80' : 'rgba(255,255,255,0.4)' }}
-            >
+            <div className="pc-header-sub" style={{ color: typing ? '#4ade80' : 'rgba(255,255,255,0.4)' }}>
               {typing ? 'typing...' : 'Partner chat'}
             </div>
           </div>
         </div>
 
-        <button
-          className="pc-icon-btn"
-          style={{ color: t.accent }}
-          onClick={() => setShowThemePicker(true)}
-        >
+        <button className="pc-icon-btn" style={{ color: t.accent }} onClick={() => setShowThemePicker(true)}>
           <Palette size={18} />
         </button>
 
@@ -362,16 +284,12 @@ export default function PartnerChatPage() {
           </button>
           {showMenu && (
             <div className="pc-menu-dropdown">
-              <button
-                onClick={async () => {
-                  if (window.confirm('Delete this partner chat?')) {
-                    await api.delete(`/api/partner-chat/${chat._id}`);
-                    navigate('/chat');
-                  }
-                }}
-                className="pc-menu-item"
-                style={{ color: '#ef4444' }}
-              >
+              <button onClick={async () => {
+                if (window.confirm('Delete this partner chat?')) {
+                  await api.delete(`/api/partner-chat/${chat._id}`);
+                  navigate('/chat');
+                }
+              }} className="pc-menu-item" style={{ color: '#ef4444' }}>
                 Delete Chat
               </button>
             </div>
@@ -381,17 +299,12 @@ export default function PartnerChatPage() {
 
       <div className="pc-notice">
         <ShieldCheck size={12} />
-        Messages auto-delete after 24 hours · only you and{' '}
-        {partner?.name?.split(' ')[0] || 'partner'} can see this
+        Messages auto-delete after 24 hours · only you and {partner?.name?.split(' ')[0] || 'partner'} can see this
       </div>
 
       <div className="pc-messages">
-        {loading && (
-          <div className="pc-loader">
-            <div className="pc-spinner" style={{ borderTopColor: t.accent }} />
-          </div>
-        )}
-
+        {loading && <div className="pc-loader"><div className="pc-spinner" style={{ borderTopColor: t.accent }} /></div>}
+        
         {messages.length === 0 && !loading && (
           <div className="pc-empty">
             <div className="pc-empty-icon">🔒</div>
@@ -403,34 +316,28 @@ export default function PartnerChatPage() {
         {messages.map((msg, i) => {
           const isMine = String(msg.sender_id?._id || msg.sender_id) === String(user?._id);
           const isSelected = selectedMsgId === msg._id;
-
+          
           return (
-            <PartnerBubble
-              key={msg._id || i}
-              msg={msg}
-              isMine={isMine}
-              isSelected={isSelected}
-              theme={t}
-              onSelect={() => setSelectedMsgId(isSelected ? null : msg._id)}
-              onReply={() => {
-                setReplyingTo(msg);
-                setEditingMsg(null);
-                if (inputRef.current) inputRef.current.focus();
-              }}
-              onEdit={() => handleEdit(msg)}
-              onDelete={() => handleDeleteMsg(msg._id)}
-              formatTime={formatTime}
-              getTimeRemaining={getTimeRemaining}
+            <PartnerBubble 
+                key={msg._id || i}
+                msg={msg}
+                isMine={isMine}
+                isSelected={isSelected}
+                theme={t}
+                onSelect={() => setSelectedMsgId(isSelected ? null : msg._id)}
+                onReply={() => { setReplyingTo(msg); setEditingMsg(null); if (inputRef.current) inputRef.current.focus(); }}
+                onEdit={() => handleEdit(msg)}
+                onDelete={() => handleDeleteMsg(msg._id)}
+                formatTime={formatTime}
+                getTimeRemaining={getTimeRemaining}
             />
           );
         })}
-
+        
         {typing && (
           <div className="pc-bubble-row theirs">
             <div className="pc-bubble pc-theirs pc-typing" style={{ background: t.msgBg }}>
-              <span />
-              <span />
-              <span />
+              <span /><span /><span />
             </div>
           </div>
         )}
@@ -439,43 +346,27 @@ export default function PartnerChatPage() {
 
       <div className="pc-footer">
         <AnimatePresence>
-          {(replyingTo || editingMsg) && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="pc-context-preview"
-            >
-              <div className="pc-context-icon" style={{ color: t.accent }}>
-                {replyingTo ? <Reply size={14} /> : <Edit2 size={14} />}
-              </div>
-              <div className="pc-context-content">
-                <span className="pc-context-label" style={{ color: t.accent }}>
-                  {replyingTo
-                    ? `Replying to ${replyingTo.sender_id?.name || 'Partner'}`
-                    : 'Editing message'}
-                </span>
-                <p className="pc-context-text">{replyingTo?.content || editingMsg?.content}</p>
-              </div>
-              <button
-                className="pc-context-close"
-                onClick={() => {
-                  setReplyingTo(null);
-                  setEditingMsg(null);
-                  if (!editingMsg) setInput('');
-                }}
-              >
-                <X size={16} />
-              </button>
-            </motion.div>
-          )}
+            {(replyingTo || editingMsg) && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="pc-context-preview">
+                    <div className="pc-context-icon" style={{ color: t.accent }}>
+                        {replyingTo ? <Reply size={14} /> : <Edit2 size={14} />}
+                    </div>
+                    <div className="pc-context-content">
+                        <span className="pc-context-label" style={{ color: t.accent }}>
+                            {replyingTo ? `Replying to ${replyingTo.sender_id?.name || 'Partner'}` : 'Editing message'}
+                        </span>
+                        <p className="pc-context-text">{replyingTo?.content || editingMsg?.content}</p>
+                    </div>
+                    <button className="pc-context-close" onClick={() => { setReplyingTo(null); setEditingMsg(null); if (!editingMsg) setInput(''); }}>
+                        <X size={16} />
+                    </button>
+                </motion.div>
+            )}
         </AnimatePresence>
 
         <div className="pc-input-bar">
           <div className="pc-input-actions">
-            <button className="pc-icon-btn-simple" onClick={() => setShowEmoji((v) => !v)}>
-              <Smile size={20} />
-            </button>
+            <button className="pc-icon-btn-simple" onClick={() => setShowEmoji(v => !v)}><Smile size={20} /></button>
             <label className="pc-icon-btn-simple">
               <Camera size={20} />
               <input type="file" accept="image/*" hidden onChange={handleImageSelect} />
@@ -489,83 +380,38 @@ export default function PartnerChatPage() {
             placeholder="Type a message…"
             value={input}
             rows={1}
-            onChange={(e) => {
-              setInput(e.target.value);
-              handleTyping();
-              e.target.style.height = 'auto';
-              e.target.style.height = e.target.scrollHeight + 'px';
+            onChange={e => { 
+                setInput(e.target.value); 
+                handleTyping();
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
             }}
-            onKeyDown={(e) =>
-              e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())
-            }
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
           />
 
-          <button
-            className="pc-send-btn"
-            style={{ background: t.accent }}
-            onClick={handleSend}
-            disabled={(!input.trim() && !imageFile) || sending}
-          >
+          <button className="pc-send-btn" style={{ background: t.accent }} onClick={handleSend} disabled={(!input.trim() && !imageFile) || sending}>
             <Send size={18} />
           </button>
         </div>
 
         <AnimatePresence>
-          {showEmoji && (
-            <motion.div
-              className="pc-emoji-grid"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-            >
-              {EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => {
-                    setInput((p) => p + e);
-                    setShowEmoji(false);
-                  }}
-                  className="pc-emoji-item"
-                >
-                  {e}
-                </button>
-              ))}
-            </motion.div>
-          )}
+            {showEmoji && (
+                <motion.div className="pc-emoji-grid" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
+                    {EMOJIS.map(e => <button key={e} onClick={() => { setInput(p => p+e); setShowEmoji(false); }} className="pc-emoji-item">{e}</button>)}
+                </motion.div>
+            )}
         </AnimatePresence>
       </div>
 
       {/* Modals & Picker */}
       <AnimatePresence>
         {showImageModal && imagePreview && (
-          <motion.div
-            className="pc-modal-wrap"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={clearImage}
-          >
-            <motion.div
-              className="pc-modal"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={(e) => e.stopPropagation()}
-            >
+          <motion.div className="pc-modal-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={clearImage}>
+            <motion.div className="pc-modal" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onClick={e => e.stopPropagation()}>
               <img src={imagePreview} alt="Preview" className="pc-modal-img" />
               <div className="pc-modal-footer">
-                <input
-                  placeholder="Add a caption…"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  className="pc-modal-input"
-                />
-                <button
-                  className="pc-modal-send"
-                  style={{ background: t.accent }}
-                  onClick={handleSend}
-                >
-                  {sending ? '...' : 'Send'}
-                </button>
+                  <input placeholder="Add a caption…" value={input} onChange={e => setInput(e.target.value)} className="pc-modal-input" />
+                  <button className="pc-modal-send" style={{ background: t.accent }} onClick={handleSend}>{sending ? '...' : 'Send'}</button>
               </div>
             </motion.div>
           </motion.div>
@@ -574,33 +420,17 @@ export default function PartnerChatPage() {
 
       <AnimatePresence>
         {showThemePicker && (
-          <motion.div
-            className="pc-modal-wrap"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowThemePicker(false)}
-          >
-            <motion.div
-              className="pc-modal"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="pc-modal-title">Choose Theme</h3>
-              <div className="pc-theme-grid">
-                {Object.entries(THEMES).map(([key, th]) => (
-                  <button
-                    key={key}
-                    className={`pc-theme-opt ${theme === key ? 'active' : ''}`}
-                    style={{ background: th.bg }}
-                    onClick={() => handleThemeChange(key)}
-                  >
-                    <div className="pc-theme-swatch" style={{ background: th.accent }} />
-                    <span>{th.name}</span>
-                  </button>
-                ))}
-              </div>
+          <motion.div className="pc-modal-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowThemePicker(false)}>
+            <motion.div className="pc-modal" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onClick={e => e.stopPropagation()}>
+                <h3 className="pc-modal-title">Choose Theme</h3>
+                <div className="pc-theme-grid">
+                  {Object.entries(THEMES).map(([key, th]) => (
+                    <button key={key} className={`pc-theme-opt ${theme === key ? 'active' : ''}`} style={{ background: th.bg }} onClick={() => handleThemeChange(key)}>
+                      <div className="pc-theme-swatch" style={{ background: th.accent }} />
+                      <span>{th.name}</span>
+                    </button>
+                  ))}
+                </div>
             </motion.div>
           </motion.div>
         )}
@@ -618,9 +448,9 @@ export default function PartnerChatPage() {
           overflow: hidden;
           border-left: 1px solid rgba(255,255,255,0.05);
           border-right: 1px solid rgba(255,255,255,0.05);
-          
+          backdrop-filter: blur(20px);
         }
-        .pc-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(0,0,0,0.3);  border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .pc-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(0,0,0,0.3); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.05); }
         .pc-icon-btn { background: none; border: none; color: rgba(255,255,255,0.7); padding: 8px; cursor: pointer; }
         .pc-header-info { flex: 1; display: flex; align-items: center; gap: 12px; cursor: pointer; }
         .pc-header-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
@@ -686,18 +516,7 @@ export default function PartnerChatPage() {
   );
 }
 
-function PartnerBubble({
-  msg,
-  isMine,
-  isSelected,
-  theme,
-  onSelect,
-  onReply,
-  onEdit,
-  onDelete,
-  formatTime,
-  getTimeRemaining,
-}) {
+function PartnerBubble({ msg, isMine, isSelected, theme, onSelect, onReply, onEdit, onDelete, formatTime, getTimeRemaining }) {
   const x = useMotionValue(0);
   const opacity = useTransform(x, [0, 60], [0, 1]);
   const scale = useTransform(x, [0, 60], [0.8, 1]);
@@ -712,65 +531,38 @@ function PartnerBubble({
         className={`pc-bubble ${isMine ? 'pc-mine' : 'pc-theirs'} ${msg.isDeleted ? 'deleted' : ''}`}
         onClick={onSelect}
       >
-        <motion.div
-          style={{ position: 'absolute', left: -40, top: '50%', y: '-50%', opacity, scale }}
-        >
-          <Reply size={18} color={theme.accent} />
+        <motion.div style={{ position: 'absolute', left: -40, top: '50%', y: '-50%', opacity, scale }}>
+            <Reply size={18} color={theme.accent} />
         </motion.div>
 
         {msg.replyTo && !msg.isDeleted && (
-          <div className="pc-reply-bubble">
-            <span style={{ fontWeight: 700, fontSize: 10, display: 'block', marginBottom: 2 }}>
-              {msg.replyTo.sender_id?.name || 'Partner'}
-            </span>
-            <span style={{ opacity: 0.7 }}>{msg.replyTo.content}</span>
-          </div>
+            <div className="pc-reply-bubble">
+                <span style={{ fontWeight: 700, fontSize: 10, display: 'block', marginBottom: 2 }}>
+                    {msg.replyTo.sender_id?.name || 'Partner'}
+                </span>
+                <span style={{ opacity: 0.7 }}>{msg.replyTo.content}</span>
+            </div>
         )}
 
         {msg.message_type === 'image' && msg.image_url && !msg.isDeleted && (
-          <img
-            src={api.getFileUrl(msg.image_url)}
-            className="pc-msg-img"
-            alt=""
-            onClick={() => window.open(api.getFileUrl(msg.image_url), '_blank')}
-          />
+          <img src={api.getFileUrl(msg.image_url)} className="pc-msg-img" alt="" onClick={() => window.open(api.getFileUrl(msg.image_url), '_blank')} />
         )}
-
+        
         <p className="pc-bubble-text">{msg.content}</p>
-
+        
         <div className="pc-bubble-meta">
           {msg.isEdited && <span>edited</span>}
           <span>{formatTime(msg.created_at)}</span>
-          {msg.expires_at && (
-            <span className="pc-timer">
-              <Clock size={10} />
-              {getTimeRemaining(msg.expires_at)}
-            </span>
-          )}
+          {msg.expires_at && <span className="pc-timer"><Clock size={10} />{getTimeRemaining(msg.expires_at)}</span>}
         </div>
       </motion.div>
 
       <AnimatePresence>
         {isSelected && !msg.isDeleted && (
-          <motion.div
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
-            className="pc-msg-actions"
-          >
-            <button className="pc-action-btn" onClick={onReply}>
-              <Reply size={14} /> Reply
-            </button>
-            {isMine && (
-              <button className="pc-action-btn" onClick={onEdit}>
-                <Edit2 size={14} /> Edit
-              </button>
-            )}
-            {isMine && (
-              <button className="pc-action-btn" style={{ color: '#ef4444' }} onClick={onDelete}>
-                <Trash2 size={14} /> Delete
-              </button>
-            )}
+          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} className="pc-msg-actions">
+            <button className="pc-action-btn" onClick={onReply}><Reply size={14} /> Reply</button>
+            {isMine && <button className="pc-action-btn" onClick={onEdit}><Edit2 size={14} /> Edit</button>}
+            {isMine && <button className="pc-action-btn" style={{ color: '#ef4444' }} onClick={onDelete}><Trash2 size={14} /> Delete</button>}
           </motion.div>
         )}
       </AnimatePresence>

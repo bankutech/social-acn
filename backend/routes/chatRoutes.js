@@ -1,21 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const {
-  getChats,
-  getChat,
-  sendMessage,
-  markAsRead,
-  getUsersForChat,
-  deleteChat,
-  editMessage,
-  deleteMessage,
-} = require('../controllers/chatController');
+const { getChats, getChat, sendMessage, markAsRead, getUsersForChat, deleteChat, editMessage, deleteMessage } = require('../controllers/chatController');
 
 // Socket.io middleware to pass io instance to controllers
 router.use((req, res, next) => {
-  req.io = req.app.get('io');
-  next();
+    req.io = req.app.get('io');
+    next();
 });
 
 router.get('/', protect, getChats);

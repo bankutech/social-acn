@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, UserPlus, X, Briefcase, BookOpen, Sparkles } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
-import toast from 'react-hot-toast';
 import { BRAND } from '../config/brand';
 
 export default function SignupPage() {
@@ -13,23 +13,25 @@ export default function SignupPage() {
   const [skillInput, setSkillInput] = useState('');
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
+    setError('');
     try {
       await googleLogin(credentialResponse.credential);
-      toast.success('Successfully logged in with Google');
     } catch (err) {
-      toast.error(err.message || 'Google sign-up failed');
+      setError(err.message || 'Google Auth failed');
     }
     setLoading(false);
   };
 
   const handleGoogleError = () => {
-    toast.error('Google sign-up didn’t go through. Try again.');
+    setError('Google Sign In was unsuccessful. Try again.');
   };
 
+  // Form handling functions
   const addSkill = () => {
     const s = skillInput.trim();
     if (s && !form.skills.includes(s) && form.skills.length < 10) {
@@ -39,7 +41,7 @@ export default function SignupPage() {
   };
 
   const removeSkill = (skill) => {
-    setForm({ ...form, skills: form.skills.filter((s) => s !== skill) });
+    setForm({ ...form, skills: form.skills.filter(s => s !== skill) });
   };
 
   const handleAvatar = (e) => {
@@ -52,175 +54,216 @@ export default function SignupPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
     try {
       let avatarUrl = '';
       if (avatarFile) {
+        // Just mock placeholder logic for demo
         avatarUrl = `https://i.pravatar.cc/150?u=${form.email}`;
       }
-      await signup({
-        ...form,
-        avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${form.email}`,
-      });
-      toast.success('Account created successfully!');
+      await signup({ ...form, avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${form.email}` });
     } catch (err) {
-      toast.error(err.message || 'Signup failed');
+      setError(err.message || 'Signup failed');
     }
     setLoading(false);
   };
 
   return (
-    <div className="sp-split">
-      <aside className="sp-aside">
-        <span className="sp-aside-mark">{BRAND.name}</span>
-        <div className="sp-aside-body">
-          <h1 className="sp-aside-title">
-            Your notes deserve
-            <br />
-            better than your
-            <br />
-            camera roll.
-          </h1>
-          <p className="sp-aside-copy">
-            Make an account, follow your classmates, and keep everything useful in one place —
-            questions, explanations, and the resources people actually recommend.
-          </p>
-          <ul className="sp-points">
-            <li>Ask a question, get an answer before the exam</li>
-            <li>Save posts into folders like “Exam prep”</li>
-            <li>60-second reels for topics that need a walkthrough</li>
-          </ul>
+    <div className="modern-auth-split">
+      {/* LEFT SIDE: Brand & Value Prop */}
+      <div className="auth-presentation auth-presentation-signup">
+        <div className="presentation-content">
+          <motion.div 
+            className="brand-logo"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <img src={BRAND.logo} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: 'inherit' }} />
+          </motion.div>
+          
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            Expand your <span className="text-highlight">Mind</span>.
+            <br />Grow your <span className="text-highlight">Network</span>.
+          </motion.h1>
+
+          <motion.p 
+            className="presentation-sub"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            Join thousands of ambitious students. Share your knowledge, discover new skills, and connect with brilliant minds today.
+          </motion.p>
+
+          <motion.div 
+            className="feature-list"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <div className="feature-item">
+              <div className="feature-icon"><BookOpen size={20} /></div>
+              <span>Access exclusive study materials</span>
+            </div>
+            <div className="feature-item">
+              <div className="feature-icon"><Briefcase size={20} /></div>
+              <span>Build an impressive portfolio</span>
+            </div>
+            <div className="feature-item">
+              <div className="feature-icon"><Sparkles size={20} /></div>
+              <span>Discover curated learning reels</span>
+            </div>
+          </motion.div>
         </div>
-      </aside>
+        {/* Dynamic mesh background elements */}
+        <div className="mesh-gradient mesh-1"></div>
+        <div className="mesh-gradient mesh-2"></div>
+      </div>
 
-      <main className="sp-main">
-        <form onSubmit={handleSubmit} className="sp-form">
-          <div className="sp-form-head">
-            <span className="sp-mark-mobile">{BRAND.name}</span>
-            <h2>Create your account</h2>
-            <p>Takes about a minute.</p>
+      {/* RIGHT SIDE: The Form */}
+      <div className="auth-form-wrapper">
+        <motion.div 
+          className="auth-form-container"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="auth-header">
+            <h2>Create Account</h2>
+            <p className="auth-subtitle">Join {BRAND.name} to unlock your potential</p>
           </div>
 
-          <div className="sp-avatar-row">
-            <label htmlFor="avatar-input" className="sp-avatar-picker">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="Avatar preview" />
-              ) : (
-                <span>Add photo</span>
+          <form onSubmit={handleSubmit} className="premium-form">
+            <AnimatePresence>
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }} 
+                  animate={{ opacity: 1, height: 'auto' }} 
+                  exit={{ opacity: 0, height: 0 }}
+                  className="premium-error"
+                >
+                  {error}
+                </motion.div>
               )}
-            </label>
-            <input id="avatar-input" type="file" accept="image/*" onChange={handleAvatar} hidden />
-            <p className="sp-avatar-hint">Optional — you can do this later.</p>
-          </div>
+            </AnimatePresence>
 
-          <label className="sp-field">
-            <span>Full name</span>
-            <input
-              type="text"
-              placeholder="Ada Lovelace"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              autoComplete="name"
-            />
-          </label>
+            <div className="avatar-upload-row">
+              <label htmlFor="avatar-input" className="premium-avatar-picker">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" />
+                ) : (
+                  <div className="premium-avatar-placeholder">📷</div>
+                )}
+              </label>
+              <input id="avatar-input" type="file" accept="image/*" onChange={handleAvatar} hidden />
+              <div className="avatar-text">
+                <strong>Profile Picture</strong>
+                <span>Show everyone who you are</span>
+              </div>
+            </div>
 
-          <label className="sp-field">
-            <span>School email</span>
-            <input
-              type="email"
-              placeholder="you@university.edu"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-              autoComplete="email"
-            />
-          </label>
-
-          <label className="sp-field">
-            <span>Password</span>
-            <span className="sp-pass-wrap">
-              <input
-                type={showPass ? 'text' : 'password'}
-                placeholder="At least 6 characters"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                className="sp-pass-toggle"
-                onClick={() => setShowPass(!showPass)}
-                aria-label={showPass ? 'Hide password' : 'Show password'}
-              >
-                {showPass ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
-            </span>
-          </label>
-
-          <label className="sp-field">
-            <span>
-              Short bio <em>optional</em>
-            </span>
-            <textarea
-              placeholder="What do you study?"
-              value={form.bio}
-              onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              rows={2}
-              maxLength={160}
-            />
-          </label>
-
-          <div className="sp-field">
-            <span className="sp-field-label">
-              Subjects <em>optional</em>
-            </span>
-            <div className="sp-skill-row">
+            <div className="input-group-modern">
+              <label>Full Name</label>
               <input
                 type="text"
-                placeholder="e.g. Calculus, Spanish, Thermodynamics"
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addSkill();
-                  }
-                }}
+                placeholder="E.g. Elon Musk"
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                required
               />
-              <button type="button" className="sp-skill-add" onClick={addSkill}>
-                Add
-              </button>
             </div>
-            {form.skills.length > 0 && (
-              <div className="sp-skill-tags">
-                {form.skills.map((s) => (
-                  <span key={s} className="sp-skill-tag">
-                    {s}
-                    <button type="button" onClick={() => removeSkill(s)} aria-label={`Remove ${s}`}>
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
+
+            <div className="input-group-modern">
+              <label>Work/School Email</label>
+              <input
+                type="email"
+                placeholder="you@university.edu"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="input-group-modern">
+              <label>Secure Password</label>
+              <div className="rel-input">
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  placeholder="Min 6 characters"
+                  value={form.password}
+                  onChange={e => setForm({ ...form, password: e.target.value })}
+                  required
+                  minLength={6}
+                />
+                <button type="button" className="modern-pass-toggle" onClick={() => setShowPass(!showPass)}>
+                  {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
-            )}
+            </div>
+
+            <div className="input-group-modern">
+              <label>Short Bio</label>
+              <textarea
+                placeholder="I'm a sophomore studying computer science..."
+                value={form.bio}
+                onChange={e => setForm({ ...form, bio: e.target.value })}
+                rows={2}
+                maxLength={160}
+              />
+            </div>
+
+            <div className="input-group-modern">
+              <label>Your Top Skills</label>
+              <div className="skill-input-flex">
+                <input
+                  type="text"
+                  placeholder="E.g. Python, Math, Design"
+                  value={skillInput}
+                  onChange={e => setSkillInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill(); } }}
+                />
+                <button type="button" className="btn-add-skill" onClick={addSkill}>Add</button>
+              </div>
+              
+              <div className="premium-skill-tags">
+                <AnimatePresence>
+                  {form.skills.map(s => (
+                    <motion.span 
+                      key={s} 
+                      className="premium-skill-tag"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                    >
+                      {s} <button type="button" onClick={() => removeSkill(s)}><X size={12} /></button>
+                    </motion.span>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            <button type="submit" className="btn-premium-submit" disabled={loading}>
+              {loading ? <span className="loader-spinner" style={{ width: 22, height: 22, borderWidth: 2 }} /> : <><UserPlus size={20} /> Register Now</>}
+            </button>
+          </form>
+
+          <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>
+             <div style={{ flex: 1, borderBottom: '1px solid rgba(255,255,255,0.08)' }}></div>
+             <span style={{ padding: '0 16px', opacity: 0.5 }}>OR</span>
+             <div style={{ flex: 1, borderBottom: '1px solid rgba(255,255,255,0.08)' }}></div>
           </div>
 
-          <button type="submit" className="sp-submit" disabled={loading}>
-            {loading ? 'Creating account…' : 'Create account'}
-          </button>
-
-          <div className="sp-divider">
-            <span>or</span>
-          </div>
-
-          <div className="sp-google">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
-              shape="rectangular"
+              shape="pill"
               theme="filled_black"
               size="large"
               text="signup_with"
@@ -228,218 +271,336 @@ export default function SignupPage() {
             />
           </div>
 
-          <p className="sp-footer">
-            Already have an account? <Link to="/login">Log in</Link>
+          <p className="auth-footer-link">
+            Already a member? <Link to="/login">Sign In Instead</Link>
           </p>
-        </form>
-      </main>
+        </motion.div>
+      </div>
 
       <style>{`
-        .sp-split {
+        /* SPLIT LAYOUT */
+        .modern-auth-split {
           display: flex;
+          width: 100%;
           min-height: 100vh;
           background: var(--bg-primary);
+          overflow: hidden;
         }
-        .sp-aside {
+        
+        /* LEFT SIDE - BRANDING */
+        .auth-presentation {
           display: none;
-          flex: 1.1;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: 40px 48px;
-          border-right: 1px solid var(--border-color);
-          background: var(--bg-secondary);
+          flex: 1;
+          position: relative;
+          background: #0a0a0c;
+          align-items: center;
+          justify-content: center;
+          padding: 60px;
+          overflow: hidden;
+          border-right: 1px solid rgba(255,255,255,0.05);
         }
-        .sp-aside-mark {
-          font-family: var(--font-display);
-          font-size: 19px;
-          font-weight: 600;
-          color: var(--text-primary);
+        
+        .auth-presentation-signup {
+          display: none;
         }
-        .sp-aside-body { max-width: 460px; }
-        .sp-aside-title {
-          font-family: var(--font-display);
-          font-size: clamp(30px, 3.4vw, 42px);
-          font-weight: 500;
-          line-height: 1.15;
-          letter-spacing: -0.01em;
-          margin-bottom: 18px;
+
+        @media (min-width: 900px) {
+          .auth-presentation {
+            display: flex;
+          }
         }
-        .sp-aside-copy {
-          font-size: 15px;
-          line-height: 1.65;
-          color: var(--text-secondary);
-          margin-bottom: 28px;
-          max-width: 420px;
+        
+        .mesh-gradient {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(100px);
+          opacity: 0.4;
+          z-index: 0;
         }
-        .sp-points {
-          list-style: none;
-          padding: 0;
-          margin: 0;
+        .mesh-1 {
+          width: 600px;
+          height: 600px;
+          background: #7c3aed;
+          top: -200px;
+          left: -200px;
+          animation: floatSlow 15s ease-in-out infinite alternate;
+        }
+        .mesh-2 {
+          width: 500px;
+          height: 500px;
+          background: #06b6d4;
+          bottom: -200px;
+          right: -100px;
+          animation: floatSlow 12s ease-in-out infinite alternate-reverse;
+        }
+        
+        @keyframes floatSlow {
+          0% { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(50px, 30px) scale(1.1); }
+        }
+
+        .presentation-content {
+          position: relative;
+          z-index: 10;
+          max-width: 500px;
+        }
+        
+        .brand-logo {
+          width: 64px;
+          height: 64px;
+          background: white;
+          color: black;
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 28px;
+          font-weight: 800;
+          margin-bottom: 32px;
+          box-shadow: 0 12px 32px rgba(255,255,255,0.1);
+        }
+        
+        .presentation-content h1 {
+          font-size: 52px;
+          line-height: 1.1;
+          font-weight: 800;
+          color: white;
+          margin-bottom: 24px;
+        }
+        .text-highlight {
+          color: transparent;
+          background: linear-gradient(135deg, #a78bfa, #22d3ee);
+          -webkit-background-clip: text;
+        }
+        
+        .presentation-sub {
+          font-size: 18px;
+          color: rgba(255,255,255,0.7);
+          line-height: 1.6;
+          margin-bottom: 40px;
+        }
+
+        .feature-list {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 16px;
         }
-        .sp-points li {
-          font-size: 14px;
-          color: var(--text-secondary);
-          padding-left: 18px;
-          position: relative;
+        
+        .feature-item {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          background: rgba(255,255,255,0.03);
+          padding: 16px 20px;
+          border-radius: 16px;
+          border: 1px solid rgba(255,255,255,0.05);
+          color: white;
+          font-weight: 500;
         }
-        .sp-points li::before {
-          content: '—';
-          position: absolute;
-          left: 0;
-          color: var(--accent);
+        
+        .feature-icon {
+          background: rgba(255,255,255,0.1);
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 12px;
+          color: #22d3ee;
         }
-        .sp-main {
+
+        /* RIGHT SIDE - FORM CONTAINER */
+        .auth-form-wrapper {
           flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 40px 20px;
+          background: var(--bg-primary);
+          position: relative;
         }
-        .sp-form { width: 100%; max-width: 380px; display: flex; flex-direction: column; }
-        .sp-mark-mobile {
-          font-family: var(--font-display);
-          font-size: 19px;
-          font-weight: 600;
+        
+        .auth-form-container {
+          width: 100%;
+          max-width: 420px;
+          display: flex;
+          flex-direction: column;
+          z-index: 10;
+        }
+
+        .auth-header {
           margin-bottom: 32px;
         }
-        .sp-form-head { margin-bottom: 22px; }
-        .sp-form-head h2 {
-          font-family: var(--font-display);
-          font-size: 26px;
+        
+        .auth-header h2 {
+          font-size: 32px;
+          font-weight: 800;
+          margin-bottom: 8px;
+          letter-spacing: -0.5px;
+        }
+        
+        .auth-subtitle {
+          color: var(--text-muted);
+          font-size: 15px;
+        }
+
+        /* PREMIUM FORM ELEMENTS */
+        .premium-form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        
+        .input-group-modern {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .input-group-modern label {
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .input-group-modern input, 
+        .input-group-modern textarea {
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.08);
+          padding: 16px;
+          border-radius: 14px;
+          font-size: 15px;
+          color: white;
+          transition: all 0.2s;
+        }
+        
+        .input-group-modern input:focus, 
+        .input-group-modern textarea:focus {
+          background: rgba(255,255,255,0.05);
+          border-color: var(--accent-light);
+          box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+        
+        .rel-input {
+          position: relative;
+        }
+        .modern-pass-toggle {
+          position: absolute;
+          right: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--text-muted);
+          transition: color 0.2s;
+        }
+        .modern-pass-toggle:hover { color: white; }
+
+        .premium-error {
+          background: rgba(239, 68, 68, 0.1);
+          color: #fca5a5;
+          padding: 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          font-size: 14px;
           font-weight: 500;
-          margin-bottom: 4px;
         }
-        .sp-form-head p { color: var(--text-muted); font-size: 14px; }
-        .sp-error {
-          background: rgba(200, 86, 74, 0.1);
-          border: 1px solid rgba(200, 86, 74, 0.35);
-          color: #e5978e;
-          padding: 11px 13px;
-          border-radius: var(--radius-md);
-          font-size: 13.5px;
-          margin-bottom: 16px;
-        }
-        .sp-avatar-row {
+
+        /* AVATAR ROW */
+        .avatar-upload-row {
           display: flex;
           align-items: center;
-          gap: 14px;
-          margin-bottom: 18px;
+          gap: 16px;
+          padding: 12px;
+          background: rgba(255,255,255,0.02);
+          border-radius: 16px;
+          border: 1px dashed rgba(255,255,255,0.1);
         }
-        .sp-avatar-picker {
+        .premium-avatar-picker {
           width: 64px;
           height: 64px;
           border-radius: 50%;
-          border: 1px dashed var(--border-light);
+          border: 2px solid var(--accent);
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
           cursor: pointer;
-          font-size: 11px;
-          color: var(--text-muted);
-          text-align: center;
-          flex-shrink: 0;
-        }
-        .sp-avatar-picker:hover { border-color: var(--text-muted); color: var(--text-secondary); }
-        .sp-avatar-picker img { width: 100%; height: 100%; object-fit: cover; }
-        .sp-avatar-hint { margin: 0; font-size: 12.5px; color: var(--text-muted); }
-        .sp-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-        .sp-field > span:first-child, .sp-field-label {
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--text-secondary);
-        }
-        .sp-field em {
-          font-style: normal;
-          font-weight: 400;
-          color: var(--text-muted);
-          font-size: 12px;
-        }
-        .sp-pass-wrap { position: relative; display: block; }
-        .sp-pass-toggle {
-          position: absolute;
-          right: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: var(--text-muted);
-        }
-        .sp-pass-toggle:hover { color: var(--text-primary); }
-        .sp-skill-row { display: flex; gap: 8px; }
-        .sp-skill-add {
           background: var(--bg-elevated);
-          border: 1px solid var(--border-color);
-          color: var(--text-primary);
-          padding: 0 16px;
-          border-radius: var(--radius-md);
-          font-size: 13.5px;
-          font-weight: 500;
+          transition: transform 0.2s;
         }
-        .sp-skill-add:hover { border-color: var(--border-light); }
-        .sp-skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .sp-skill-tag {
+        .premium-avatar-picker:hover { transform: scale(1.05); }
+        .premium-avatar-picker img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-text { display: flex; flex-direction: column; }
+        .avatar-text strong { font-size: 14px; font-weight: 600; }
+        .avatar-text span { font-size: 12px; color: var(--text-muted); }
+
+        /* SKILLS */
+        .skill-input-flex {
+          display: flex;
+          gap: 8px;
+        }
+        .btn-add-skill {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          padding: 0 20px;
+          border-radius: 14px;
+          font-weight: 600;
+          color: white;
+          transition: background 0.2s;
+        }
+        .btn-add-skill:hover { background: rgba(255,255,255,0.1); }
+        
+        .premium-skill-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 4px;
+        }
+        .premium-skill-tag {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: var(--bg-tertiary);
-          border: 1px solid var(--border-color);
-          color: var(--text-secondary);
-          padding: 4px 6px 4px 10px;
-          border-radius: var(--radius-sm);
-          font-size: 12.5px;
-        }
-        .sp-skill-tag button {
-          display: flex;
-          color: var(--text-muted);
-          padding: 2px;
-        }
-        .sp-skill-tag button:hover { color: var(--danger); }
-        .sp-submit {
-          background: var(--accent);
-          color: #1d1915;
+          background: var(--accent-bg);
+          border: 1px solid var(--accent-glow);
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
           font-weight: 600;
-          font-size: 14.5px;
-          padding: 12px;
-          border-radius: var(--radius-md);
-          margin-top: 6px;
-          transition: background 0.12s;
+          color: var(--accent-light);
         }
-        .sp-submit:hover:not(:disabled) { background: var(--accent-light); }
-        .sp-submit:disabled { opacity: 0.5; cursor: default; }
-        .sp-divider {
+        
+        .btn-premium-submit {
+          background: white;
+          color: black;
+          padding: 16px;
+          border-radius: 14px;
+          font-size: 16px;
+          font-weight: 700;
           display: flex;
           align-items: center;
-          margin: 18px 0;
-          color: var(--text-muted);
-          font-size: 12px;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 12px;
+          transition: transform 0.1s, opacity 0.2s;
         }
-        .sp-divider::before, .sp-divider::after {
-          content: '';
-          flex: 1;
-          border-top: 1px solid var(--border-color);
-        }
-        .sp-divider span { padding: 0 12px; }
-        .sp-google { display: flex; justify-content: center; }
-        .sp-footer {
-          margin-top: 26px;
+        .btn-premium-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,255,255,0.15); }
+        .btn-premium-submit:active { transform: scale(0.98); }
+
+        .auth-footer-link {
+          margin-top: 32px;
           text-align: center;
           color: var(--text-muted);
-          font-size: 14px;
+          font-size: 15px;
         }
-        .sp-footer a {
-          color: var(--text-primary);
-          font-weight: 500;
+        .auth-footer-link a {
+          color: white;
+          font-weight: 600;
+          margin-left: 4px;
           text-decoration: underline;
-          text-decoration-color: var(--border-light);
-          text-underline-offset: 3px;
+          text-decoration-color: rgba(255,255,255,0.2);
+          text-underline-offset: 4px;
         }
-        .sp-footer a:hover { text-decoration-color: var(--accent); }
-        @media (min-width: 920px) {
-          .sp-aside { display: flex; }
-          .sp-mark-mobile { display: none; }
-        }
+        .auth-footer-link a:hover { text-decoration-color: white; }
       `}</style>
     </div>
   );

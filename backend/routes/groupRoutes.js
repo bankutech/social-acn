@@ -2,13 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const {
-  createGroup,
-  listGroups,
-  getGroup,
-  joinGroup,
-  leaveGroup,
-  getGroupPosts,
-  createGroupPost,
+    createGroup, listGroups, getGroup,
+    joinGroup, leaveGroup, getGroupPosts, createGroupPost
 } = require('../controllers/groupController');
 
 router.post('/', protect, createGroup);

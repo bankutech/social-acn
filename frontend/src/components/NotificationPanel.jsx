@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell } from 'lucide-react';
+import { Bell, Check, CheckCircle2, X } from 'lucide-react';
 import api from '../lib/api';
 import Avatar from './Avatar';
 import { useAuth } from '../context/AuthContext';
@@ -20,25 +20,22 @@ export default function NotificationPanel({ isOpen, onClose }) {
   useEffect(() => {
     if (!user) return;
     const socket = getSocket();
-
+    const notifEvent = `notification_${user._id || user.id}`;
+    
     const handleNotif = () => {
-      loadNotifications();
+      // Refresh list when panel is open
+      if (isOpen) loadNotifications();
     };
+    socket.on(notifEvent, handleNotif);
 
-    socket.on(`notification_${user._id || user.id}`, handleNotif);
-
-    return () => {
-      socket.off(`notification_${user._id || user.id}`, handleNotif);
-    };
-  }, [user]);
+    return () => socket.off(notifEvent, handleNotif);
+  }, [user, isOpen]);
 
   const loadNotifications = async () => {
     try {
       const data = await api.get('/api/notifications');
       setNotifications(data);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -46,33 +43,24 @@ export default function NotificationPanel({ isOpen, onClose }) {
     e.stopPropagation();
     try {
       await api.patch(`/api/notifications/${id}/read`);
-      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
-    } catch (e) {
-      console.error(e);
-    }
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+    } catch (e) { console.error(e); }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
       await api.patch('/api/notifications/read-all');
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch (e) {
-      console.error(e);
-    }
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (e) { console.error(e); }
   };
 
   const getNotificationText = (n) => {
     switch (n.type) {
-      case 'like':
-        return 'liked your post.';
-      case 'comment':
-        return 'commented on your post.';
-      case 'follow':
-        return 'started following you.';
-      case 'message':
-        return 'sent you a message.';
-      default:
-        return 'interacted with you.';
+      case 'like': return 'liked your post.';
+      case 'comment': return 'commented on your post.';
+      case 'follow': return 'started following you.';
+      case 'message': return 'sent you a message.';
+      default: return 'interacted with you.';
     }
   };
 
@@ -81,156 +69,62 @@ export default function NotificationPanel({ isOpen, onClose }) {
       {isOpen && (
         <>
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
-            role="button"
-            aria-label="Close notifications"
             style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(10, 8, 5, 0.7)',
-              zIndex: 1100,
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)', zIndex: 1100
             }}
           />
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             style={{
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '72vh',
-              background: 'var(--bg-secondary)',
-              borderTopLeftRadius: 12,
-              borderTopRightRadius: 12,
-              zIndex: 1101,
-              display: 'flex',
-              flexDirection: 'column',
-              border: '1px solid var(--border-color)',
-              borderBottom: 'none',
-              maxWidth: 640,
-              margin: '0 auto',
+              position: 'fixed', bottom: 0, left: 0, right: 0,
+              height: '80vh', background: '#0a0a0c',
+              borderTopLeftRadius: 24, borderTopRightRadius: 24,
+              zIndex: 1101, display: 'flex', flexDirection: 'column',
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+              border: '1px solid rgba(255,255,255,0.1)'
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
-              <div
-                style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-light)' }}
-              />
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
+              <div style={{ width: 40, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.2)' }} />
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '2px 20px 12px',
-                borderBottom: '1px solid var(--border-color)',
-              }}
-            >
-              <h2
-                style={{
-                  color: 'var(--text-primary)',
-                  margin: 0,
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 17,
-                  fontWeight: 500,
-                }}
-              >
-                Notifications
-              </h2>
-              <button
-                onClick={handleMarkAllAsRead}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent-light)',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontSize: 13,
-                }}
-              >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <h2 style={{ color: 'white', margin: 0, fontSize: 20, fontWeight: 700 }}>Notifications</h2>
+              <button onClick={handleMarkAllAsRead} style={{ background: 'none', border: 'none', color: '#a78bfa', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
                 Mark all read
               </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
               {loading ? (
-                <div
-                  style={{
-                    padding: 24,
-                    textAlign: 'center',
-                    color: 'var(--text-muted)',
-                    fontSize: 13.5,
-                  }}
-                >
-                  Loading…
-                </div>
+                <div style={{ padding: 20, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Loading...</div>
               ) : notifications.length === 0 ? (
-                <div
-                  style={{
-                    padding: 48,
-                    textAlign: 'center',
-                    color: 'var(--text-muted)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 10,
-                    fontSize: 13.5,
-                  }}
-                >
-                  <Bell size={28} style={{ opacity: 0.4 }} />
-                  <p style={{ margin: 0 }}>Nothing yet. Activity on your posts shows up here.</p>
+                <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <Bell size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
+                  <p>No notifications yet</p>
                 </div>
               ) : (
-                notifications.map((n) => (
-                  <div
-                    key={n._id}
-                    onClick={(e) => handleMarkAsRead(n._id, e)}
-                    style={{
-                      display: 'flex',
-                      gap: 12,
-                      padding: '14px 20px',
-                      background: n.read ? 'transparent' : 'var(--accent-bg)',
-                      borderBottom: '1px solid var(--border-color)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Avatar src={n.sender?.avatarUrl} name={n.sender?.name} size={38} />
+                notifications.map(n => (
+                  <div key={n._id} onClick={(e) => handleMarkAsRead(n._id, e)} style={{
+                    display: 'flex', gap: 12, padding: '16px 20px',
+                    background: n.read ? 'transparent' : 'rgba(167, 139, 250, 0.05)',
+                    borderBottom: '1px solid rgba(255,255,255,0.03)',
+                    cursor: 'pointer', transition: 'background 0.2s'
+                  }}>
+                    <Avatar src={n.sender?.avatarUrl} name={n.sender?.name} size={44} />
                     <div style={{ flex: 1 }}>
-                      <p
-                        style={{
-                          margin: '0 0 2px',
-                          color: 'var(--text-primary)',
-                          fontSize: 13.5,
-                          lineHeight: 1.45,
-                        }}
-                      >
-                        <span style={{ fontWeight: 600 }}>{n.sender?.name}</span>{' '}
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          {getNotificationText(n)}
-                        </span>
+                      <p style={{ margin: '0 0 4px', color: 'white', fontSize: 14, lineHeight: 1.4 }}>
+                        <span style={{ fontWeight: 600 }}>{n.sender?.name}</span> {getNotificationText(n)}
                       </p>
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
                         {new Date(n.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                    {!n.read && (
-                      <div
-                        style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: '50%',
-                          background: 'var(--accent)',
-                          marginTop: 6,
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
+                    {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#a78bfa', marginTop: 6 }} />}
                   </div>
                 ))
               )}

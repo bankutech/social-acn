@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import Skeleton from '../components/Skeleton';
-import EmptyState from '../components/EmptyState';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, UserPlus, UserCheck, Users, X } from 'lucide-react';
+import { Search, UserPlus, UserCheck, Sparkles, TrendingUp, Users, X } from 'lucide-react';
 
 export default function ExplorePage() {
-  useDocumentTitle('Explore');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -50,226 +47,274 @@ export default function ExplorePage() {
   const handleFollow = async (userId) => {
     try {
       const res = await api.post(`/api/auth/follow/${userId}`);
-      setFollowingMap((prev) => ({ ...prev, [userId]: res.following }));
+      setFollowingMap(prev => ({ ...prev, [userId]: res.following }));
     } catch {}
   };
 
   const displayUsers = search.trim() ? searchResults : users;
 
   return (
-    <div className="xp-root">
-      <header className="xp-header">
-        <div className="xp-header-inner">
-          <h1>Find people</h1>
-          <div className="xp-search">
-            <Search size={16} />
-            <input
-              placeholder="Search by name or email"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button onClick={() => setSearch('')} aria-label="Clear search">
-                <X size={14} />
-              </button>
-            )}
-          </div>
+    <div className="premium-explore-layout">
+      {/* Search Header */}
+      <header className="explore-premium-header">
+        <div className="search-pill-container">
+          <Search size={18} className="search-icon-inside" />
+          <input
+            className="premium-search-input"
+            placeholder="Search the ACN+ network..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="search-clear" onClick={() => setSearch('')}>
+              <X size={14} />
+            </button>
+          )}
         </div>
       </header>
 
-      <main className="xp-main">
+      <main className="explore-content-area">
         {!search.trim() && (
-          <p className="xp-section-label">
-            {loading ? '' : displayUsers.length > 0 ? 'People you might know' : ''}
-          </p>
-        )}
-        {search.trim() && searchResults.length > 0 && (
-          <p className="xp-section-label">
-            {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
-          </p>
-        )}
-
-        {loading ? (
-          <div className="xp-list">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="xp-row" style={{ pointerEvents: 'none' }}>
-                <Skeleton width="44px" height="44px" borderRadius="50%" />
-                <div style={{ flex: 1 }}>
-                  <Skeleton width="150px" height="14px" />
-                  <div style={{ marginTop: 6 }}>
-                    <Skeleton width="220px" height="11px" />
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="discovery-header">
+            <div className="discovery-title">
+              <TrendingUp size={16} />
+              <span>Recommended Students</span>
+            </div>
+            <p className="discovery-subtitle">Expand your network with like-minded peers</p>
           </div>
-        ) : displayUsers.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title={search.trim() ? `No one matches “${search}”` : 'No suggestions right now'}
-            description={
-              search.trim()
-                ? 'Check the spelling, or try a shorter name.'
-                : "When classmates join Sphere, they'll show up here."
-            }
-          />
-        ) : (
-          <div className="xp-list">
-            <AnimatePresence initial={false}>
-              {displayUsers.map((u) => {
-                const currentUserId = user?._id || user?.id;
-                const isFollowed =
-                  followingMap[u._id] ?? u.followers?.some((f) => (f._id || f) === currentUserId);
+        )}
 
+        <div className="explorer-grid">
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <div key="loading" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="premium-user-card" style={{ pointerEvents: 'none' }}>
+                    <div className="card-user-meta">
+                      <Skeleton width="60px" height="60px" borderRadius="50%" />
+                      <div className="user-text-meta">
+                        <Skeleton width="140px" height="16px" style={{ marginBottom: 8 }} />
+                        <Skeleton width="200px" height="12px" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : displayUsers.length === 0 ? (
+              <motion.div
+                key="empty"
+                className="no-results-premium"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="no-result-icon">
+                  <Users size={40} />
+                </div>
+                <h3>Silence in the network</h3>
+                <p>We couldn't find anyone matching "{search}". Try another term.</p>
+              </motion.div>
+            ) : (
+              displayUsers.map((u, i) => {
+                const currentUserId = user?._id || user?.id;
+                const isFollowed = followingMap[u._id] ?? u.followers?.some(f => (f._id || f) === currentUserId);
+                
                 return (
                   <motion.div
                     key={u._id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="xp-row"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="premium-user-card"
                   >
-                    <button className="xp-row-person" onClick={() => navigate(`/profile/${u._id}`)}>
-                      <Avatar src={u.avatarUrl} name={u.name} size={44} />
-                      <span className="xp-row-meta">
-                        <span className="xp-row-name">{u.name}</span>
-                        <span className="xp-row-sub">
-                          {u.bio
-                            ? u.bio
-                            : u.skills?.length > 0
-                              ? u.skills.slice(0, 3).join(' · ')
-                              : `${u.followers?.length || 0} followers`}
-                        </span>
-                      </span>
-                    </button>
+                    <div className="card-user-meta" onClick={() => navigate(`/profile/${u._id}`)}>
+                      <div className="avatar-ring">
+                        <Avatar src={u.avatarUrl} name={u.name} size={60} />
+                      </div>
+                      <div className="user-text-meta">
+                        <div className="user-row-top">
+                          <h4 className="u-name">{u.name}</h4>
+                        </div>
+                        <p className="u-bio">
+                          {u.bio ? u.bio.slice(0, 60) + (u.bio.length > 60 ? '...' : '') : 
+                           u.skills?.length > 0 ? u.skills.slice(0, 2).join(' · ') : 'ACN+ Student'}
+                        </p>
+                        <div className="u-stats-mini">
+                          <Users size={12} />
+                          <span>{u.followers?.length || 0} followers</span>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <button
-                      className={isFollowed ? 'xp-follow-btn is-following' : 'xp-follow-btn'}
+                      className={isFollowed ? 'btn-following-pill' : 'btn-follow-pill'}
                       onClick={() => handleFollow(u._id)}
                     >
-                      {isFollowed ? (
-                        <>
-                          <UserCheck size={14} /> Following
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus size={14} /> Follow
-                        </>
-                      )}
+                      {isFollowed ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                      <span>{isFollowed ? 'Following' : 'Follow'}</span>
                     </button>
                   </motion.div>
                 );
-              })}
-            </AnimatePresence>
-          </div>
-        )}
+              })
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
       <style>{`
-        .xp-root {
+        .premium-explore-layout {
+          background: #000000;
           min-height: 100vh;
-          padding-bottom: calc(var(--bottom-nav-height) + 24px);
+          color: white;
+          padding-bottom: 90px;
         }
-        .xp-header {
+
+        .explore-premium-header {
           position: sticky;
           top: 0;
+          background: rgba(0, 0, 0, 0.82);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          padding: 16px;
           z-index: 100;
-          background: var(--bg-primary);
-          border-bottom: 1px solid var(--border-color);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .xp-header-inner {
-          max-width: 640px;
+
+        .search-pill-container {
+          position: relative;
+          max-width: 600px;
           margin: 0 auto;
-          padding: 14px 16px;
+          display: flex;
+          align-items: center;
         }
-        .xp-header h1 {
-          font-family: var(--font-display);
-          font-size: 19px;
-          font-weight: 500;
-          margin-bottom: 12px;
+
+        .search-icon-inside {
+          position: absolute;
+          left: 16px;
+          color: rgba(255, 255, 255, 0.4);
         }
-        .xp-search {
+
+        .premium-search-input {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          padding: 14px 16px 14px 48px;
+          color: white;
+          font-size: 15px;
+          transition: all 0.2s;
+        }
+        .premium-search-input:focus {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: #a78bfa;
+          box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.1);
+        }
+
+        .explore-content-area {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 24px 16px;
+        }
+
+        .discovery-header {
+          margin-bottom: 24px;
+        }
+        .discovery-title {
           display: flex;
           align-items: center;
           gap: 8px;
-          background: var(--bg-input);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          padding: 0 12px;
-          color: var(--text-muted);
-        }
-        .xp-search:focus-within { border-color: var(--accent); }
-        .xp-search input {
-          background: transparent;
-          border: none;
-          padding: 10px 0;
-          font-size: 14px;
-        }
-        .xp-search button {
-          display: flex;
-          color: var(--text-muted);
-          padding: 4px;
-        }
-        .xp-search button:hover { color: var(--text-primary); }
-        .xp-main {
-          max-width: 640px;
-          margin: 0 auto;
-          padding: 8px 16px;
-        }
-        .xp-section-label {
           font-size: 11px;
-          font-weight: 600;
+          font-weight: 800;
+          color: #a78bfa;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: var(--text-muted);
-          margin: 14px 0 6px;
+          letter-spacing: 1.5px;
+          margin-bottom: 8px;
         }
-        .xp-list { display: flex; flex-direction: column; }
-        .xp-row {
+        .discovery-subtitle {
+          font-size: 20px;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .explorer-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .premium-user-card {
+          background: rgba(15, 15, 18, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          padding: 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          padding: 12px 0;
-          border-bottom: 1px solid var(--border-color);
+          transition: all 0.2s;
         }
-        .xp-row-person {
+        .premium-user-card:hover { border-color: rgba(255, 255, 255, 0.12); background: rgba(20, 20, 25, 0.8); }
+
+        .card-user-meta {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 16px;
           flex: 1;
+          cursor: pointer;
+        }
+
+        .avatar-ring {
+          padding: 2px;
+          border-radius: 50%;
+          border: 2px solid transparent;
+          transition: border-color 0.3s;
+        }
+        .premium-user-card:hover .avatar-ring { border-color: #a78bfa; }
+
+        .user-text-meta {
           min-width: 0;
-          text-align: left;
         }
-        .xp-row-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-        .xp-row-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-        .xp-row-sub {
-          font-size: 12.5px;
-          color: var(--text-muted);
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          max-width: 340px;
-        }
-        .xp-follow-btn {
-          display: inline-flex;
+        .u-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .u-bio { font-size: 13px; color: rgba(255, 255, 255, 0.5); line-height: 1.4; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .u-stats-mini { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #a78bfa; font-weight: 600; }
+
+        .btn-follow-pill, .btn-following-pill {
+          display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 7px 13px;
-          border-radius: var(--radius-md);
-          font-size: 12.5px;
-          font-weight: 600;
-          background: var(--accent);
-          color: #1d1915;
-          flex-shrink: 0;
-          transition: background 0.12s;
+          gap: 8px;
+          padding: 10px 18px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 700;
+          transition: all 0.2s;
         }
-        .xp-follow-btn:hover { background: var(--accent-light); }
-        .xp-follow-btn.is-following {
-          background: transparent;
-          border: 1px solid var(--border-color);
-          color: var(--text-secondary);
-          font-weight: 500;
+
+        .btn-follow-pill { background: white; color: black; }
+        .btn-follow-pill:hover { transform: scale(1.05); }
+        
+        .btn-following-pill { background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        .no-results-premium {
+          text-align: center;
+          padding: 60px 20px;
         }
-        .xp-follow-btn.is-following:hover { border-color: var(--border-light); color: var(--text-primary); }
+        .no-result-icon {
+          width: 80px;
+          height: 80px;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          color: rgba(255,255,255,0.2);
+        }
+
+        .skeleton-explorer-row {
+          height: 80px;
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 20px;
+          margin-bottom: 12px;
+        }
       `}</style>
     </div>
   );

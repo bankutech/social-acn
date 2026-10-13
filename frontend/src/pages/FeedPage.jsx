@@ -1,22 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { useScrollMemory } from '../hooks/useScrollMemory';
 import api from '../lib/api';
 import PostCard from '../components/PostCard';
-import PullToRefresh from '../components/PullToRefresh';
 import { PostSkeleton } from '../components/Skeleton';
-import { BRAND } from '../config/brand';
-import WelcomeChecklist from '../components/WelcomeChecklist';
-import EmptyState from '../components/EmptyState';
+import Skeleton from '../components/Skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { PenLine, Search } from 'lucide-react';
-import { Virtuoso } from 'react-virtuoso';
+import { BRAND } from '../config/brand';
 
 export default function FeedPage() {
-  useDocumentTitle('Feed');
-  useScrollMemory('feed-scroll');
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,13 +28,14 @@ export default function FeedPage() {
 
     try {
       const postsData = await api.get(`/api/posts/feed?page=${pageToLoad}&limit=10`);
-
+      
       if (append) {
-        setPosts((prev) => [...prev, ...postsData]);
+        setPosts(prev => [...prev, ...postsData]);
       } else {
         setPosts(postsData);
       }
 
+      
       // If we got fewer posts than the limit, we're likely at the end
       if (postsData.length < 10) {
         setHasMore(false);
@@ -63,129 +58,270 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="fp-root">
-      <header className="fp-header">
-        <div className="fp-header-inner">
-          <button
-            className="fp-wordmark"
+    <div className="premium-feed-layout">
+      {/* Premium Sticky Header */}
+      <header className="premium-nav-header">
+        <div className="nav-header-left">
+          <motion.div 
+            className="mini-brand"
+            whileHover={{ scale: 1.05 }}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            {BRAND.name}
+            <img src={BRAND.logo} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: 'inherit' }} />
+          </motion.div>
+          <h1 className="nav-title">Sphere</h1>
+        </div>
+        
+        <div className="nav-header-actions">
+          <button className="nav-action-btn" onClick={() => navigate('/explore')} title="Search">
+            <Search size={20} />
           </button>
-          <div className="fp-header-actions">
-            <button
-              className="fp-header-btn"
-              onClick={() => navigate('/explore')}
-              aria-label="Find people"
-            >
-              <Search size={18} />
-            </button>
-            <button
-              className="fp-header-btn"
-              onClick={() => navigate('/create')}
-              aria-label="New post"
-            >
-              <PenLine size={18} />
-            </button>
-          </div>
         </div>
       </header>
 
-      <PullToRefresh onRefresh={() => loadFeed(1, false)}>
-        <main className="fp-main">
-          <WelcomeChecklist />
+      <main className="feed-content-area">
 
-        {loading ? (
-          <div className="fp-stack">
-            {[1, 2, 3].map((i) => (
-              <PostSkeleton key={i} />
-            ))}
-          </div>
-        ) : posts.length === 0 ? (
-          <EmptyState
-            icon={PenLine}
-            title="Nothing here yet"
-            description="Posts from people you follow show up here. Find a few classmates to follow, or share something yourself."
-            actionLabel="Find people"
-            onAction={() => navigate('/explore')}
-          />
-        ) : (
-          <div className="fp-stack">
-            <Virtuoso
-              useWindowScroll
-              data={posts}
-              endReached={handleLoadMore}
-              itemContent={(index, post) => (
-                <div style={{ paddingBottom: '16px' }}>
-                  <PostCard key={post._id} post={post} onUpdate={() => loadFeed(1, false)} />
+        {/* Global Post Feed */}
+        <div className="post-feed-container">
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <div key="loading" className="feed-skeleton-stack">
+                {[1, 2, 3].map(i => <PostSkeleton key={i} />)}
+              </div>
+            ) : posts.length === 0 ? (
+              <motion.div
+                key="empty"
+                className="premium-empty-feed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="empty-icon-wrapper">
+                  <Search size={48} />
                 </div>
-              )}
-              components={{
-                Footer: () => (
-                  <div style={{ padding: '24px 0', display: 'flex', justifyContent: 'center' }}>
-                    {loadingMore && <div className="loader-spinner" />}
-                  </div>
-                )
+                <h3>Your World awaits</h3>
+                <p>Start following friends to see their updates and moments here.</p>
+                <button className="btn-premium-accent" onClick={() => navigate('/explore')}>
+                  Discover people
+                </button>
+              </motion.div>
+            ) : (
+              posts.map((post, i) => (
+                <motion.div
+                  key={post._id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08, duration: 0.5 }}
+                  className="feed-post-item"
+                >
+                  <PostCard post={post} onUpdate={loadFeed} />
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+
+          {/* Infinite Scroll Trigger */}
+          {hasMore && posts.length > 0 && (
+            <div 
+              style={{ padding: '20px 0', display: 'flex', justifyContent: 'center' }}
+              ref={(el) => {
+                if (el && !loadingMore && !loading) {
+                  const observer = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) {
+                      observer.disconnect();
+                      handleLoadMore();
+                    }
+                  }, { threshold: 0.5 });
+                  observer.observe(el);
+                }
               }}
-            />
-          </div>
-        )}
-        </main>
-      </PullToRefresh>
+            >
+              {loadingMore && <PostSkeleton />}
+            </div>
+          )}
+        </div>
+      </main>
 
       <style>{`
-        .fp-root {
+        .premium-feed-layout {
+          background: var(--bg-secondary);
           min-height: 100vh;
-          padding-bottom: calc(var(--bottom-nav-height) + 24px);
+          padding-top: 72px; /* Header space */
+          padding-bottom: 90px; /* Nav space */
         }
-        .fp-header {
-          position: sticky;
+
+        /* STICKY HEADER */
+        .premium-nav-header {
+          position: fixed;
           top: 0;
-          z-index: 100;
-          background: var(--bg-primary);
+          left: 0;
+          right: 0;
+          height: 72px;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
           border-bottom: 1px solid var(--border-color);
-        }
-        .fp-header-inner {
-          max-width: 640px;
-          margin: 0 auto;
-          height: 56px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0 16px;
+          padding: 0 20px;
+          z-index: 1000;
         }
-        .fp-wordmark {
-          font-family: var(--font-display);
-          font-size: 21px;
-          font-weight: 600;
-          letter-spacing: -0.01em;
-          color: var(--text-primary);
+
+        .nav-header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
-        .fp-header-actions { display: flex; align-items: center; gap: 4px; }
-        .fp-header-btn {
-          width: 36px;
-          height: 36px;
+
+        .mini-brand {
+          width: 32px;
+          height: 32px;
+          background: var(--accent);
+          color: white;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: var(--radius-md);
+          font-weight: 800;
+          font-size: 14px;
+          cursor: pointer;
+        }
+
+        .nav-title {
+          font-size: 22px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          color: var(--text-primary);
+        }
+        .plus-accent {
+          color: var(--accent);
+        }
+
+        .nav-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .nav-action-btn {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           color: var(--text-secondary);
+          transition: all 0.2s;
         }
-        .fp-header-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
-        .fp-main {
-          max-width: 640px;
+        .nav-action-btn:hover {
+          background: var(--bg-hover);
+          color: var(--text-primary);
+        }
+        .ai-spark-icon {
+          color: var(--accent-light);
+        }
+
+        /* CONTENT AREA */
+        .feed-content-area {
+          max-width: 600px;
           margin: 0 auto;
-          padding: 20px 16px 0;
         }
-        .fp-stack {
+
+        .stories-section {
+          padding: 8px 0 20px;
+          border-bottom: 1px solid var(--border-color);
+          margin-bottom: 20px;
+        }
+        
+        .stories-skeleton-row {
+          display: flex;
+          gap: 16px;
+          padding: 0 16px;
+          overflow: hidden;
+        }
+        .skeleton-circle-story {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          background: var(--bg-tertiary);
+          flex-shrink: 0;
+        }
+
+        .post-feed-container {
+          padding: 0 16px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 24px;
         }
-        .fp-load-more {
+
+        .feed-post-item {
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: 20px;
+          overflow: hidden;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          box-shadow: var(--shadow-sm);
+        }
+        .feed-post-item:hover {
+          border-color: var(--accent-light);
+          box-shadow: var(--shadow-md);
+        }
+
+        /* EMPTY STATE */
+        .premium-empty-feed {
+          text-align: center;
+          padding: 80px 40px;
           display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .empty-icon-wrapper {
+          width: 100px;
+          height: 100px;
+          background: var(--accent-bg);
+          border-radius: 30px;
+          display: flex;
+          align-items: center;
           justify-content: center;
-          padding: 24px 0;
+          color: var(--accent);
+          margin-bottom: 24px;
+        }
+        .premium-empty-feed h3 {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 12px;
+          color: var(--text-primary);
+        }
+        .premium-empty-feed p {
+          color: var(--text-muted);
+          font-size: 15px;
+          line-height: 1.6;
+          margin-bottom: 32px;
+        }
+        .btn-premium-accent {
+          background: var(--accent);
+          color: white;
+          padding: 14px 28px;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 14px;
+          transition: transform 0.2s;
+          border: none;
+          cursor: pointer;
+        }
+        .btn-premium-accent:hover { transform: scale(1.05); }
+
+        /* SKELETONS */
+        .feed-skeleton-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .skeleton-card-premium {
+          height: 400px;
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: 20px;
         }
       `}</style>
     </div>

@@ -3,20 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft,
-  Image,
-  Code,
-  Type,
-  X,
-  Video,
-  LayoutGrid as Grid,
-  HelpCircle,
-  BookOpen,
-  StickyNote,
-  Link2,
-  Lightbulb,
-} from 'lucide-react';
+import { ArrowLeft, Image, Code, Type, X, Video, LayoutGrid as Grid } from 'lucide-react';
 
 export default function CreatePostPage() {
   const { user } = useAuth();
@@ -24,115 +11,66 @@ export default function CreatePostPage() {
   const [createMode, setCreateMode] = useState('post');
   const [postType, setPostType] = useState('text');
   const [content, setContent] = useState('');
-  const [imageFiles, setImageFiles] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [codeSnippet, setCodeSnippet] = useState('');
   const [codeLanguage, setCodeLanguage] = useState('javascript');
   const [reelTitle, setReelTitle] = useState('');
   const [reelVideoFile, setReelVideoFile] = useState(null);
   const [reelVideoPreview, setReelVideoPreview] = useState('');
   const [reelHashtags, setReelHashtags] = useState('');
-  const [learningType, setLearningType] = useState('general');
-  const [tags, setTags] = useState('');
-  const [sourceUrl, setSourceUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
   const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
+    const file = e.target.files[0];
+    if (!file) return;
     if (createMode === 'post') {
-      const newFiles = [...imageFiles, ...files].slice(0, 5); // Max 5 images
-      setImageFiles(newFiles);
-      setImagePreviews(newFiles.map(file => URL.createObjectURL(file)));
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
       setPostType('image');
     } else if (createMode === 'reel') {
-      if (!file.type.startsWith('video/')) {
-        alert('Please select a valid video file.');
-        return;
-      }
+      if (!file.type.startsWith('video/')) { alert('Please select a valid video file.'); return; }
       setReelVideoFile(file);
       setReelVideoPreview(URL.createObjectURL(file));
     }
   };
 
-  const removeFile = (index) => {
-    if (typeof index === 'number') {
-      const newFiles = imageFiles.filter((_, i) => i !== index);
-      setImageFiles(newFiles);
-      setImagePreviews(newFiles.map(file => URL.createObjectURL(file)));
-      if (newFiles.length === 0 && fileInputRef.current) fileInputRef.current.value = '';
-    } else {
-      setImageFiles([]);
-      setImagePreviews([]);
-      setReelVideoFile(null);
-      setReelVideoPreview('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+  const removeFile = () => {
+    setImageFile(null); setImagePreview('');
+    setReelVideoFile(null); setReelVideoPreview('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+
   const handleSubmit = async () => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       if (createMode === 'post') {
-        if (!content.trim() && imageFiles.length === 0 && !codeSnippet.trim()) return setLoading(false);
-        let imageUrl = '',
-          cloudinaryPublicId = '';
-        let images = [];
-        
-        if (imageFiles.length > 0) {
-          const fd = new FormData();
-          imageFiles.forEach(file => fd.append('files', file));
-          const r = await api.upload('/api/upload/images/posts', fd);
-          
-          if (Array.isArray(r)) {
-             images = r.map(file => file.url);
-             if (images.length > 0) {
-               imageUrl = images[0]; // for backwards compatibility
-               cloudinaryPublicId = r[0].filename;
-             }
-          }
+        if (!content.trim() && !imageFile && !codeSnippet.trim()) return setLoading(false);
+        let imageUrl = '', cloudinaryPublicId = '';
+        if (imageFile) {
+          const fd = new FormData(); fd.append('file', imageFile);
+          const r = await api.upload('/api/upload/image/posts', fd);
+          imageUrl = r.url; cloudinaryPublicId = r.filename;
         }
-        await api.post('/api/posts', {
-          content,
-          type: postType,
-          imageUrl,
-          images,
-          cloudinaryPublicId,
-          codeSnippet: postType === 'code' ? codeSnippet : undefined,
-          codeLanguage: postType === 'code' ? codeLanguage : undefined,
-          learningType,
-          tags: tags
-            .split(/[\s,]+/)
-            .map((t) => t.trim())
-            .filter(Boolean),
-          sourceUrl: sourceUrl.trim() || undefined,
-        });
+        await api.post('/api/posts', { content, type: postType, imageUrl, cloudinaryPublicId, codeSnippet: postType === 'code' ? codeSnippet : undefined, codeLanguage: postType === 'code' ? codeLanguage : undefined });
         navigate('/');
       } else if (createMode === 'reel') {
         if (!reelTitle.trim() || !reelVideoFile) return setLoading(false);
-        const fd = new FormData();
-        fd.append('file', reelVideoFile);
+        const fd = new FormData(); fd.append('file', reelVideoFile);
         const r = await api.upload('/api/upload/video/reels', fd);
-        await api.post('/api/reels', {
-          title: reelTitle,
-          videoUrl: r.url,
-          cloudinaryPublicId: r.filename,
-          hashtags: reelHashtags,
-        });
+        await api.post('/api/reels', { title: reelTitle, videoUrl: r.url, cloudinaryPublicId: r.filename, hashtags: reelHashtags });
         navigate('/reels');
       }
-    } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.');
-    }
+    } catch (err) { setError(err.message || 'Something went wrong. Please try again.'); }
     setLoading(false);
   };
 
   const isSubmitDisabled = () => {
     if (loading) return true;
-    if (createMode === 'post') return !content.trim() && imageFiles.length === 0 && !codeSnippet.trim();
+    if (createMode === 'post') return !content.trim() && !imageFile && !codeSnippet.trim();
     if (createMode === 'reel') return !reelTitle.trim() || !reelVideoFile;
     return true;
   };
@@ -144,6 +82,9 @@ export default function CreatePostPage() {
 
   return (
     <div className="page-root">
+      <div className="noise-overlay" />
+      <div className={`ambient-blob blob-${createMode}`} />
+
       <div className="page-inner">
         {/* Header */}
         <header className="page-header">
@@ -162,16 +103,14 @@ export default function CreatePostPage() {
             </motion.span>
           </div>
 
-          <button className="share-btn" onClick={handleSubmit} disabled={isSubmitDisabled()}>
+          <button
+            className="share-btn"
+            onClick={handleSubmit}
+            disabled={isSubmitDisabled()}
+          >
             {loading ? (
-              <span className="dots">
-                <span />
-                <span />
-                <span />
-              </span>
-            ) : (
-              'Share'
-            )}
+              <span className="dots"><span /><span /><span /></span>
+            ) : 'Share'}
           </button>
         </header>
 
@@ -191,18 +130,17 @@ export default function CreatePostPage() {
 
         {/* Mode tabs */}
         <div className="mode-tabs" role="tablist">
-          {modes.map((m) => (
+          {modes.map(m => (
             <button
               key={m.key}
               role="tab"
               aria-selected={createMode === m.key}
               className={`mode-tab ${createMode === m.key ? 'active' : ''}`}
-              onClick={() => {
-                setCreateMode(m.key);
-                removeFile();
-                setContent('');
-              }}
+              onClick={() => { setCreateMode(m.key); removeFile(); setContent(''); }}
             >
+              {createMode === m.key && (
+                <motion.span layoutId="tab-pill" className="tab-pill" />
+              )}
               <m.icon size={15} strokeWidth={2} />
               <span>{m.label}</span>
             </button>
@@ -227,7 +165,7 @@ export default function CreatePostPage() {
                     { key: 'text', icon: Type, label: 'Text' },
                     { key: 'image', icon: Image, label: 'Image' },
                     { key: 'code', icon: Code, label: 'Code' },
-                  ].map((t) => (
+                  ].map(t => (
                     <button
                       key={t.key}
                       className={`sub-tab ${postType === t.key ? 'active' : ''}`}
@@ -241,101 +179,26 @@ export default function CreatePostPage() {
 
                 <textarea
                   className="main-textarea"
-                  placeholder={
-                    postType === 'code'
-                      ? "What's this code about?"
-                      : learningType === 'question'
-                        ? 'What do you want to know? Be specific…'
-                        : 'Share a thought, a lesson, or an achievement…'
-                  }
+                  placeholder={postType === 'code' ? "What's this code about?" : "Share a thought, a lesson, or an achievement…"}
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  onChange={e => setContent(e.target.value)}
                   rows={postType === 'code' ? 2 : 5}
                 />
 
-                {/* Learning context */}
-                <div className="learn-row">
-                  <span className="learn-label">Post type</span>
-                  <div className="learn-types">
-                    {[
-                      { key: 'general', icon: Lightbulb, label: 'General' },
-                      { key: 'question', icon: HelpCircle, label: 'Question' },
-                      { key: 'explanation', icon: BookOpen, label: 'Explanation' },
-                      { key: 'resource', icon: Link2, label: 'Resource' },
-                      { key: 'note', icon: StickyNote, label: 'Note' },
-                    ].map((t) => (
-                      <button
-                        key={t.key}
-                        type="button"
-                        className={`learn-type ${learningType === t.key ? 'active' : ''}`}
-                        onClick={() => setLearningType(t.key)}
-                      >
-                        <t.icon size={13} strokeWidth={2} />
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="learn-meta">
-                  <input
-                    className="learn-input"
-                    type="text"
-                    placeholder="Add tags — e.g. math, calculus, exam-prep"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
-                  />
-                  {learningType === 'resource' && (
-                    <input
-                      className="learn-input"
-                      type="url"
-                      placeholder="Source link (https://…)"
-                      value={sourceUrl}
-                      onChange={(e) => setSourceUrl(e.target.value)}
-                    />
-                  )}
-                </div>
 
                 {postType === 'image' && (
                   <div className="upload-area">
-                    {imagePreviews.length > 0 ? (
-                      <div className="previews-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
-                        {imagePreviews.map((preview, idx) => (
-                          <div key={idx} className="preview-wrap">
-                            <img src={preview} alt="Preview" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8 }} />
-                            <button className="remove-btn" onClick={() => removeFile(idx)}>
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))}
-                        {imageFiles.length < 5 && (
-                          <label className="upload-label small-upload" style={{ height: 120, padding: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-light)', borderRadius: 8, cursor: 'pointer' }}>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={handleFileSelect}
-                              hidden
-                            />
-                            <Image size={22} strokeWidth={1.5} color="var(--text-muted)" />
-                          </label>
-                        )}
+                    {imagePreview ? (
+                      <div className="preview-wrap">
+                        <img src={imagePreview} alt="Preview" />
+                        <button className="remove-btn" onClick={removeFile}><X size={14} /></button>
                       </div>
                     ) : (
                       <label className="upload-label">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleFileSelect}
-                          ref={fileInputRef}
-                          hidden
-                        />
-                        <div className="upload-icon">
-                          <Image size={22} strokeWidth={1.5} />
-                        </div>
-                        <strong>Add images</strong>
-                        <span>Select up to 5 images (PNG, JPG, WEBP)</span>
+                        <input type="file" accept="image/*" onChange={handleFileSelect} ref={fileInputRef} hidden />
+                        <div className="upload-icon"><Image size={22} strokeWidth={1.5} /></div>
+                        <strong>Add image</strong>
+                        <span>PNG, JPG or GIF · up to 10 MB</span>
                       </label>
                     )}
                   </div>
@@ -344,30 +207,22 @@ export default function CreatePostPage() {
                 {postType === 'code' && (
                   <div className="code-block">
                     <div className="code-titlebar">
-                      <span className="traffic">
-                        <i />
-                        <i />
-                        <i />
-                      </span>
+                      <span className="traffic"><i /><i /><i /></span>
                       <select
                         value={codeLanguage}
-                        onChange={(e) => setCodeLanguage(e.target.value)}
+                        onChange={e => setCodeLanguage(e.target.value)}
                         className="lang-select"
                       >
-                        {['javascript', 'python', 'java', 'cpp', 'html', 'css', 'sql', 'other'].map(
-                          (l) => (
-                            <option key={l} value={l}>
-                              {l.toUpperCase()}
-                            </option>
-                          )
-                        )}
+                        {['javascript','python','java','cpp','html','css','sql','other'].map(l => (
+                          <option key={l} value={l}>{l.toUpperCase()}</option>
+                        ))}
                       </select>
                     </div>
                     <textarea
                       className="code-area"
                       placeholder="// Paste your code here…"
                       value={codeSnippet}
-                      onChange={(e) => setCodeSnippet(e.target.value)}
+                      onChange={e => setCodeSnippet(e.target.value)}
                       rows={10}
                     />
                   </div>
@@ -375,28 +230,19 @@ export default function CreatePostPage() {
               </div>
             )}
 
+
             {/* ── REEL ── */}
             {createMode === 'reel' && (
               <div className="reel-wrap">
                 {reelVideoPreview ? (
                   <div className="reel-preview">
                     <video src={reelVideoPreview} controls />
-                    <button className="remove-btn" onClick={removeFile}>
-                      <X size={14} />
-                    </button>
+                    <button className="remove-btn" onClick={removeFile}><X size={14} /></button>
                   </div>
                 ) : (
                   <label className="reel-upload">
-                    <input
-                      type="file"
-                      accept="video/*"
-                      onChange={handleFileSelect}
-                      ref={fileInputRef}
-                      hidden
-                    />
-                    <div className="upload-icon reel-icon">
-                      <Video size={26} strokeWidth={1.5} />
-                    </div>
+                    <input type="file" accept="video/*" onChange={handleFileSelect} ref={fileInputRef} hidden />
+                    <div className="upload-icon reel-icon"><Video size={26} strokeWidth={1.5} /></div>
                     <strong>Upload a video</strong>
                     <span>MP4 or MOV · up to 60 s</span>
                   </label>
@@ -405,23 +251,11 @@ export default function CreatePostPage() {
                 <div className="meta-fields">
                   <div className="field">
                     <label htmlFor="reel-caption">Caption</label>
-                    <input
-                      id="reel-caption"
-                      type="text"
-                      placeholder="Describe your reel…"
-                      value={reelTitle}
-                      onChange={(e) => setReelTitle(e.target.value)}
-                    />
+                    <input id="reel-caption" type="text" placeholder="Describe your reel…" value={reelTitle} onChange={e => setReelTitle(e.target.value)} />
                   </div>
                   <div className="field">
                     <label htmlFor="reel-tags">Hashtags</label>
-                    <input
-                      id="reel-tags"
-                      type="text"
-                      placeholder="#design  #code  #productivity"
-                      value={reelHashtags}
-                      onChange={(e) => setReelHashtags(e.target.value)}
-                    />
+                    <input id="reel-tags" type="text" placeholder="#design  #code  #productivity" value={reelHashtags} onChange={e => setReelHashtags(e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -431,18 +265,50 @@ export default function CreatePostPage() {
       </div>
 
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
         /* ── ROOT ── */
         .page-root {
           min-height: 100vh;
-          background: var(--bg-primary);
-          color: var(--text-primary);
-          padding-bottom: calc(var(--bottom-nav-height) + 24px);
+          background: #08080a;
+          color: #f0ede8;
+          font-family: 'Sora', sans-serif;
+          position: relative;
+          overflow-x: hidden;
+          padding-bottom: 60px;
         }
 
+        .noise-overlay {
+          position: fixed;
+          inset: 0;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+          pointer-events: none;
+          z-index: 0;
+          opacity: 0.5;
+        }
+
+        .ambient-blob {
+          position: fixed;
+          top: -20vh;
+          right: -10vw;
+          width: 55vw;
+          height: 55vw;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 0;
+          opacity: 0.12;
+          transition: background 1.2s ease;
+          filter: blur(100px);
+        }
+        .blob-post  { background: #5eead4; }
+        .blob-reel  { background: #818cf8; }
+
         .page-inner {
-          max-width: 560px;
+          position: relative;
+          z-index: 10;
+          max-width: 520px;
           margin: 0 auto;
-          padding: 0 16px;
+          padding: 0 20px;
         }
 
         /* ── HEADER ── */
@@ -450,52 +316,58 @@ export default function CreatePostPage() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 18px 0 20px;
-          border-bottom: 1px solid var(--border-color);
-          margin-bottom: 20px;
+          padding: 20px 0 24px;
         }
 
         .icon-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: var(--radius-md);
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          border: 1px solid rgba(240,237,232,0.1);
+          background: rgba(240,237,232,0.04);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--text-secondary);
+          color: #f0ede8;
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s;
           flex-shrink: 0;
         }
-        .icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .icon-btn:hover { background: rgba(240,237,232,0.08); border-color: rgba(240,237,232,0.2); }
 
         .header-center { flex: 1; text-align: center; }
         .header-eyebrow {
-          font-family: var(--font-display);
-          font-size: 16px;
+          display: block;
+          font-size: 13px;
           font-weight: 500;
-          color: var(--text-primary);
+          color: rgba(240,237,232,0.5);
+          letter-spacing: 0.01em;
         }
 
         .share-btn {
-          padding: 8px 18px;
-          background: var(--accent);
-          color: #1d1915;
-          border-radius: var(--radius-md);
-          font-size: 13.5px;
+          padding: 9px 22px;
+          background: #f0ede8;
+          color: #08080a;
+          border-radius: 99px;
+          font-family: 'Sora', sans-serif;
+          font-size: 13px;
           font-weight: 600;
+          letter-spacing: 0.01em;
+          cursor: pointer;
           border: none;
-          transition: background 0.12s;
+          transition: opacity 0.15s, transform 0.15s;
           flex-shrink: 0;
           min-width: 72px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        .share-btn:hover:not(:disabled) { background: var(--accent-light); }
-        .share-btn:disabled { opacity: 0.35; cursor: default; }
+        .share-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        .share-btn:disabled { opacity: 0.28; cursor: default; }
 
         /* loading dots */
         .dots { display: flex; gap: 3px; align-items: center; }
-        .dots span { width: 4px; height: 4px; border-radius: 50%; background: #1d1915; animation: dot-bounce 0.7s infinite alternate; }
+        .dots span { width: 5px; height: 5px; border-radius: 50%; background: #08080a; animation: dot-bounce 0.7s infinite alternate; }
         .dots span:nth-child(2) { animation-delay: 0.15s; }
         .dots span:nth-child(3) { animation-delay: 0.3s; }
         @keyframes dot-bounce { to { transform: translateY(-3px); } }
@@ -506,11 +378,11 @@ export default function CreatePostPage() {
           align-items: center;
           gap: 8px;
           padding: 10px 14px;
-          background: rgba(200, 86, 74, 0.1);
-          border: 1px solid rgba(200, 86, 74, 0.35);
-          border-radius: var(--radius-md);
-          color: #e5978e;
-          font-size: 13px;
+          background: rgba(239,68,68,0.08);
+          border: 1px solid rgba(239,68,68,0.2);
+          border-radius: 10px;
+          color: #fca5a5;
+          font-size: 12.5px;
           margin-bottom: 16px;
           overflow: hidden;
         }
@@ -518,61 +390,75 @@ export default function CreatePostPage() {
         /* ── MODE TABS ── */
         .mode-tabs {
           display: flex;
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          padding: 3px;
+          background: rgba(240,237,232,0.04);
+          border: 1px solid rgba(240,237,232,0.07);
+          border-radius: 14px;
+          padding: 5px;
           gap: 2px;
-          margin-bottom: 20px;
+          margin-bottom: 24px;
         }
 
         .mode-tab {
           flex: 1;
-          position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 7px;
-          padding: 8px 0;
-          font-size: 13.5px;
+          padding: 9px 0;
+          font-family: 'Sora', sans-serif;
+          font-size: 13px;
           font-weight: 500;
-          color: var(--text-muted);
+          color: rgba(240,237,232,0.38);
           border: none;
           background: transparent;
-          border-radius: var(--radius-sm);
-          transition: color 0.15s, background 0.15s;
+          border-radius: 10px;
+          cursor: pointer;
+          position: relative;
+          transition: color 0.2s;
         }
-        .mode-tab.active {
-          color: #1d1915;
-          background: var(--accent);
-          font-weight: 600;
+        .mode-tab.active { color: #08080a; }
+
+        .tab-pill {
+          position: absolute;
+          inset: 0;
+          background: #f0ede8;
+          border-radius: 10px;
+          z-index: -1;
         }
 
-        /* ── EDITOR ── */
+        .mode-tab span, .mode-tab svg { position: relative; z-index: 1; }
+
+        /* ── EDITOR CARD ── */
         .editor-card {
-          padding: 4px 0 0;
+          background: rgba(240,237,232,0.03);
+          border: 1px solid rgba(240,237,232,0.08);
+          border-radius: 20px;
+          padding: 20px;
         }
 
         .sub-tabs {
           display: flex;
           gap: 6px;
-          margin-bottom: 16px;
+          margin-bottom: 20px;
         }
 
         .sub-tab {
           display: flex;
           align-items: center;
           gap: 5px;
-          padding: 6px 13px;
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-full);
-          font-size: 12.5px;
+          padding: 5px 14px;
+          border: 1px solid rgba(240,237,232,0.1);
+          border-radius: 99px;
+          font-family: 'Sora', sans-serif;
+          font-size: 12px;
           font-weight: 500;
-          color: var(--text-secondary);
+          color: rgba(240,237,232,0.42);
           background: transparent;
-          transition: border-color 0.12s, color 0.12s, background 0.12s;
+          cursor: pointer;
+          transition: all 0.15s;
         }
-        .sub-tab:hover { color: var(--text-primary); border-color: var(--border-light); }
-        .sub-tab.active { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-light); }
+        .sub-tab:hover { color: rgba(240,237,232,0.7); border-color: rgba(240,237,232,0.2); }
+        .sub-tab.active { background: rgba(240,237,232,0.1); color: #f0ede8; border-color: rgba(240,237,232,0.25); }
 
         .main-textarea {
           width: 100%;
@@ -580,14 +466,36 @@ export default function CreatePostPage() {
           border: none;
           outline: none;
           resize: none;
-          font-family: var(--font);
+          font-family: 'Sora', sans-serif;
           font-size: 16px;
-          line-height: 1.6;
-          color: var(--text-primary);
-          margin-bottom: 14px;
+          font-weight: 300;
+          line-height: 1.7;
+          color: #f0ede8;
+          margin-bottom: 16px;
           display: block;
         }
-        .main-textarea::placeholder { color: var(--text-muted); }
+        .main-textarea::placeholder { color: rgba(240,237,232,0.2); }
+
+        /* ── AI BUTTON ── */
+        .ai-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 16px;
+          border: 1px solid rgba(129,140,248,0.3);
+          border-radius: 99px;
+          font-family: 'Sora', sans-serif;
+          font-size: 12px;
+          font-weight: 500;
+          color: #a5b4fc;
+          background: rgba(129,140,248,0.07);
+          cursor: pointer;
+          transition: all 0.15s;
+          margin-bottom: 20px;
+        }
+        .ai-btn:hover:not(:disabled) { background: rgba(129,140,248,0.14); border-color: rgba(129,140,248,0.5); }
+        .ai-btn.loading { opacity: 0.6; animation: ai-pulse 1.4s ease-in-out infinite; }
+        @keyframes ai-pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 0.9; } }
 
         /* ── UPLOAD ── */
         .upload-area { width: 100%; }
@@ -598,34 +506,34 @@ export default function CreatePostPage() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          padding: 40px 20px;
-          border: 1px dashed var(--border-light);
-          border-radius: var(--radius-lg);
+          padding: 44px 20px;
+          border: 1px dashed rgba(240,237,232,0.14);
+          border-radius: 14px;
           cursor: pointer;
           text-align: center;
-          transition: border-color 0.15s;
+          transition: all 0.15s;
         }
-        .upload-label:hover { border-color: var(--text-muted); }
-        .upload-label strong { font-size: 14px; font-weight: 500; color: var(--text-primary); }
-        .upload-label span { font-size: 12px; color: var(--text-muted); }
+        .upload-label:hover { border-color: rgba(240,237,232,0.3); background: rgba(240,237,232,0.03); }
+        .upload-label strong { font-size: 14px; font-weight: 500; color: #f0ede8; }
+        .upload-label span { font-size: 12px; color: rgba(240,237,232,0.35); }
 
         .upload-icon {
-          width: 44px;
-          height: 44px;
-          border-radius: var(--radius-lg);
-          border: 1px solid var(--border-color);
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          border: 1px solid rgba(240,237,232,0.1);
+          background: rgba(240,237,232,0.04);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--text-muted);
+          color: rgba(240,237,232,0.45);
           margin-bottom: 4px;
         }
 
         .preview-wrap {
           position: relative;
-          border-radius: var(--radius-lg);
+          border-radius: 14px;
           overflow: hidden;
-          border: 1px solid var(--border-color);
         }
         .preview-wrap img { width: 100%; display: block; max-height: 380px; object-fit: cover; }
 
@@ -633,54 +541,53 @@ export default function CreatePostPage() {
           position: absolute;
           top: 10px;
           right: 10px;
-          width: 30px;
-          height: 30px;
-          border-radius: var(--radius-md);
-          background: rgba(10, 8, 5, 0.8);
-          border: 1px solid var(--border-light);
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: rgba(8,8,10,0.75);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(240,237,232,0.12);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--text-primary);
+          color: #f0ede8;
           cursor: pointer;
         }
 
         /* ── CODE ── */
         .code-block {
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-lg);
+          border: 1px solid rgba(240,237,232,0.08);
+          border-radius: 14px;
           overflow: hidden;
-          background: #14110d;
+          background: #0d0d10;
         }
 
         .code-titlebar {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 9px 14px;
-          background: var(--bg-tertiary);
-          border-bottom: 1px solid var(--border-color);
+          padding: 10px 14px;
+          background: #141418;
+          border-bottom: 1px solid rgba(240,237,232,0.07);
         }
 
         .traffic { display: flex; gap: 5px; }
-        .traffic i { width: 8px; height: 8px; border-radius: 50%; display: block; background: var(--border-light); }
-        .traffic i:nth-child(1) { background: var(--danger); opacity: 0.7; }
-        .traffic i:nth-child(2) { background: var(--warning); opacity: 0.7; }
-        .traffic i:nth-child(3) { background: var(--success); opacity: 0.7; }
+        .traffic i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+        .traffic i:nth-child(1) { background: #ff5f57; }
+        .traffic i:nth-child(2) { background: #febc2e; }
+        .traffic i:nth-child(3) { background: #28c840; }
 
         .lang-select {
           background: transparent;
           border: none;
           outline: none;
-          font-family: var(--font-mono);
+          font-family: 'JetBrains Mono', monospace;
           font-size: 11px;
           font-weight: 500;
-          color: var(--text-muted);
+          color: rgba(240,237,232,0.4);
           cursor: pointer;
           text-transform: uppercase;
           letter-spacing: 0.06em;
-          width: auto;
-          padding: 0;
         }
 
         .code-area {
@@ -689,43 +596,108 @@ export default function CreatePostPage() {
           border: none;
           outline: none;
           resize: none;
-          font-family: var(--font-mono);
+          font-family: 'JetBrains Mono', monospace;
           font-size: 13px;
-          line-height: 1.7;
-          color: #d8c9a8;
-          padding: 14px 16px;
+          line-height: 1.8;
+          color: #7dd3fc;
+          padding: 16px;
           display: block;
         }
-        .code-area::placeholder { color: rgba(216, 201, 168, 0.3); }
+        .code-area::placeholder { color: rgba(125,211,252,0.25); }
+
+        /* ── STORY ── */
+        .story-wrap { display: flex; justify-content: center; }
+
+        .story-canvas {
+          width: 100%;
+          max-width: 300px;
+          aspect-ratio: 9/16;
+          background: #111115;
+          border-radius: 24px;
+          border: 1px solid rgba(240,237,232,0.08);
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .story-bg {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .story-upload {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          text-align: center;
+          cursor: pointer;
+          padding: 20px;
+        }
+        .story-upload strong { font-size: 14px; font-weight: 500; }
+        .story-upload span { font-size: 12px; color: rgba(240,237,232,0.38); }
+
+        .story-overlay {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          padding: 16px;
+          background: linear-gradient(to top, rgba(8,8,10,0.7) 0%, transparent 100%);
+        }
+
+        .story-text {
+          width: 100%;
+          background: transparent;
+          border: none;
+          outline: none;
+          resize: none;
+          font-family: 'Sora', sans-serif;
+          font-size: 15px;
+          font-weight: 500;
+          color: #fff;
+          text-align: center;
+          text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+          line-height: 1.5;
+        }
+        .story-text::placeholder { color: rgba(255,255,255,0.4); }
+
+        .story-remove { top: 12px; right: 12px; }
 
         /* ── REEL ── */
+        .reel-wrap { }
+
         .reel-upload {
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           gap: 10px;
-          padding: 56px 20px;
-          border: 1px dashed var(--border-light);
-          border-radius: var(--radius-lg);
+          padding: 60px 20px;
+          border: 1px dashed rgba(240,237,232,0.12);
+          border-radius: 18px;
           cursor: pointer;
           text-align: center;
-          margin-bottom: 18px;
-          transition: border-color 0.15s;
+          margin-bottom: 20px;
+          transition: all 0.15s;
         }
-        .reel-upload:hover { border-color: var(--text-muted); }
-        .reel-upload strong { font-size: 14px; font-weight: 500; color: var(--text-primary); }
-        .reel-upload span { font-size: 12px; color: var(--text-muted); }
+        .reel-upload:hover { border-color: rgba(240,237,232,0.28); background: rgba(240,237,232,0.02); }
+        .reel-upload strong { font-size: 14px; font-weight: 500; }
+        .reel-upload span { font-size: 12px; color: rgba(240,237,232,0.35); }
 
-        .reel-icon { color: var(--text-muted); }
+        .reel-icon { background: rgba(129,140,248,0.08); border-color: rgba(129,140,248,0.2); color: #a5b4fc; }
 
         .reel-preview {
           position: relative;
-          border-radius: var(--radius-lg);
+          border-radius: 18px;
           overflow: hidden;
-          margin-bottom: 18px;
+          margin-bottom: 20px;
           background: #000;
-          border: 1px solid var(--border-color);
         }
         .reel-preview video { width: 100%; display: block; max-height: 50vh; object-fit: contain; }
 
@@ -734,56 +706,31 @@ export default function CreatePostPage() {
 
         .field { display: flex; flex-direction: column; gap: 6px; }
         .field label {
-          font-size: 12px;
-          font-weight: 500;
-          color: var(--text-secondary);
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: rgba(240,237,232,0.36);
         }
         .field input {
-          background: var(--bg-input);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          padding: 10px 13px;
+          background: rgba(240,237,232,0.04);
+          border: 1px solid rgba(240,237,232,0.09);
+          border-radius: 11px;
+          padding: 11px 14px;
+          font-family: 'Sora', sans-serif;
           font-size: 14px;
-          color: var(--text-primary);
+          font-weight: 400;
+          color: #f0ede8;
+          outline: none;
+          transition: border-color 0.15s;
         }
-        .field input:focus { border-color: var(--accent); }
-
-        /* ── LEARNING CONTEXT ── */
-        .learn-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-        .learn-label {
-          font-size: 12px;
-          font-weight: 500;
-          color: var(--text-secondary);
-        }
-        .learn-types { display: flex; flex-wrap: wrap; gap: 6px; }
-        .learn-type {
-          display: inline-flex; align-items: center; gap: 5px;
-          padding: 6px 12px; border-radius: var(--radius-full);
-          border: 1px solid var(--border-color);
-          background: transparent; color: var(--text-secondary);
-          font-size: 12.5px; font-weight: 500;
-          transition: border-color 0.12s, color 0.12s, background 0.12s;
-        }
-        .learn-type:hover { color: var(--text-primary); border-color: var(--border-light); }
-        .learn-type.active {
-          background: var(--accent);
-          border-color: var(--accent);
-          color: #1d1915;
-        }
-        .learn-meta { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
-        .learn-input {
-          background: var(--bg-input);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-md);
-          padding: 10px 13px;
-          font-size: 13.5px;
-          color: var(--text-primary);
-        }
-        .learn-input:focus { border-color: var(--accent); }
+        .field input:focus { border-color: rgba(240,237,232,0.25); }
+        .field input::placeholder { color: rgba(240,237,232,0.22); }
 
         /* ── RESPONSIVE ── */
         @media (max-width: 480px) {
-          .page-inner { padding: 0 14px; }
+          .page-inner { padding: 0 16px; }
+          .story-canvas { max-width: 100%; }
           .main-textarea { font-size: 15px; }
         }
       `}</style>

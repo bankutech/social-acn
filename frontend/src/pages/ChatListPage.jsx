@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
-import Skeleton from '../components/Skeleton';
-import { Search, Heart, Lock, MessageSquareDashed } from 'lucide-react';
+import SkeletonLoader from '../components/SkeletonLoader';
+import { motion } from 'framer-motion';
+import { Search, Heart, ArrowLeft } from 'lucide-react';
 import { getSocket } from '../lib/socket';
 
 export default function ChatListPage() {
@@ -21,18 +22,17 @@ export default function ChatListPage() {
     loadChats();
     const socket = getSocket();
     socket.on('user_status', ({ userId, online }) => {
-      setOnlineUsers((prev) => {
+      setOnlineUsers(prev => {
         if (online) return [...new Set([...prev, userId])];
-        return prev.filter((id) => id !== userId);
+        return prev.filter(id => id !== userId);
       });
     });
-    api
-      .get('/api/online-users')
+    // Get initial online users
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/online-users`)
+      .then(r => r.json())
       .then(setOnlineUsers)
       .catch(() => {});
-    return () => {
-      socket.off('user_status');
-    };
+    return () => { socket.off('user_status'); };
   }, []);
 
   const loadChats = async () => {
@@ -40,19 +40,19 @@ export default function ChatListPage() {
       const [chatsData, usersData, pChats] = await Promise.all([
         api.get('/api/chat').catch(() => []),
         api.get('/api/chat/users').catch(() => []),
-        api.get('/api/partner-chat').catch(() => []),
+        api.get('/api/partner-chat').catch(() => [])
       ]);
       setChats(Array.isArray(chatsData) ? chatsData : []);
       setUsers(Array.isArray(usersData) ? usersData : []);
       setPartnerChats(Array.isArray(pChats) ? pChats : []);
     } catch (err) {
-      console.error('Failed to load chats:', err);
+      console.error("Failed to load chats:", err);
     }
     setLoading(false);
   };
 
   const getPartner = (chat) => {
-    return chat.participants?.find((p) => p._id !== user?._id);
+    return chat.participants?.find(p => p._id !== user?._id);
   };
 
   const getPartnerFromPC = (pc) => {
@@ -69,19 +69,15 @@ export default function ChatListPage() {
     return `${Math.floor(s / 86400)}d`;
   };
 
-  const q = search.toLowerCase();
-  const filteredChats = chats.filter((c) => getPartner(c)?.name?.toLowerCase().includes(q));
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name?.toLowerCase().includes(q) &&
-      !chats.some((c) => c.participants?.some((p) => p._id === u._id))
-  );
+  const filteredChats = chats.filter(c => {
+    const partner = getPartner(c);
+    return partner?.name?.toLowerCase().includes(search.toLowerCase());
+  });
 
-  const nothingAtAll =
-    !loading &&
-    filteredChats.length === 0 &&
-    filteredUsers.length === 0 &&
-    partnerChats.length === 0;
+  const filteredUsers = users.filter(u =>
+    u.name?.toLowerCase().includes(search.toLowerCase()) &&
+    !chats.some(c => c.participants?.some(p => p._id === u._id))
+  );
 
   return (
     <div className="page-container" style={{ padding: 0 }}>
@@ -89,122 +85,142 @@ export default function ChatListPage() {
         <h1>Messages</h1>
       </div>
 
-      <div className="chatlist-search">
-        <Search size={16} className="chatlist-search-icon" />
-        <input
-          placeholder="Search conversations"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search conversations"
-        />
+      {/* Search */}
+      <div style={{ padding: '10px 16px' }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            placeholder="Search conversations..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ paddingLeft: 42 }}
+          />
+        </div>
       </div>
 
-      {loading ? (
-        <Skeleton type="chat" count={5} />
-      ) : nothingAtAll ? (
-        <div className="empty-block">
-          <p className="empty-lede">No conversations yet.</p>
-          <p className="empty-hint">
-            Messages you send from someone’s profile, or their replies, will show up here.
-          </p>
+      {/* Partner Chats Section */}
+      {partnerChats.length > 0 && (
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Heart size={14} fill="var(--accent)" stroke="var(--accent)" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-light)' }}>Partner Chats</span>
+          </div>
+          {partnerChats.map(pc => {
+            const partner = getPartnerFromPC(pc);
+            return (
+              <motion.div
+                key={pc._id}
+                className="chat-list-item partner-chat-item"
+                onClick={() => navigate(`/partner-chat/${partner?._id}`)}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div style={{ position: 'relative' }}>
+                  <Avatar src={partner?.avatarUrl} name={partner?.name} size={52} online={onlineUsers.includes(partner?._id)} />
+                </div>
+                <div className="chat-list-info">
+                  <div className="chat-list-name">{partner?.name} <Heart size={12} fill="#ec4899" stroke="#ec4899" /></div>
+                  <div className="chat-list-preview">
+                    {pc.lastMessage?.content || 'Start chatting...'}
+                  </div>
+                </div>
+                <div className="chat-list-time">
+                  <span className="badge" style={{ fontSize: 10, background: 'rgba(236,72,153,0.15)', color: '#ec4899' }}>🔒 Private</span>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
+      )}
+
+      {/* Regular Chats */}
+      {loading ? (
+        <SkeletonLoader type="chat" count={5} />
       ) : (
         <>
-          {partnerChats.length > 0 && (
-            <section className="chatlist-section">
-              <h2 className="chatlist-label">
-                <Heart size={12} fill="currentColor" stroke="none" /> Partner chats
-              </h2>
-              {partnerChats.map((pc) => {
-                const partner = getPartnerFromPC(pc);
-                return (
-                  <div
-                    key={pc._id}
-                    className="chat-row chat-row--partner"
-                    onClick={() => navigate(`/partner-chat/${partner?._id}`)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <Avatar
-                      src={partner?.avatarUrl}
-                      name={partner?.name}
-                      size={46}
-                      online={onlineUsers.includes(partner?._id)}
-                    />
-                    <div className="chat-row-info">
-                      <span className="chat-row-name">{partner?.name}</span>
-                      <span className="chat-row-preview">
-                        {pc.lastMessage?.content || 'Say hello'}
-                      </span>
-                    </div>
-                    <span className="chat-row-tag">
-                      <Lock size={10} /> Private
-                    </span>
-                  </div>
-                );
-              })}
-            </section>
-          )}
-
-          {filteredChats.length > 0 && (
-            <section className="chatlist-section">
-              {filteredChats.map((chat) => {
-                const partner = getPartner(chat);
-                return (
-                  <div
-                    key={chat._id}
-                    className="chat-row"
-                    onClick={() => navigate(`/chat/${partner?._id}`)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <Avatar
-                      src={partner?.avatarUrl}
-                      name={partner?.name}
-                      size={46}
-                      online={onlineUsers.includes(partner?._id)}
-                    />
-                    <div className="chat-row-info">
-                      <span className="chat-row-name">{partner?.name}</span>
-                      <span className="chat-row-preview">
-                        {chat.lastMessage || 'No messages yet'}
-                      </span>
-                    </div>
-                    <span className="chat-row-time">{timeAgo(chat.lastMessageTime)}</span>
-                  </div>
-                );
-              })}
-            </section>
-          )}
-
-          {filteredUsers.length > 0 && (
-            <section className="chatlist-section">
-              <h2 className="chatlist-label">Start a conversation</h2>
-              {filteredUsers.map((u) => (
-                <div
-                  key={u._id}
-                  className="chat-row chat-row--muted"
-                  onClick={() => navigate(`/chat/${u._id}`)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <Avatar
-                    src={u.avatarUrl}
-                    name={u.name}
-                    size={46}
-                    online={onlineUsers.includes(u._id)}
-                  />
-                  <div className="chat-row-info">
-                    <span className="chat-row-name">{u.name}</span>
-                    <span className="chat-row-preview">{u.email}</span>
-                  </div>
-                  <MessageSquareDashed size={16} className="chat-row-hint-icon" />
+          {filteredChats.map(chat => {
+            const partner = getPartner(chat);
+            return (
+              <motion.div
+                key={chat._id}
+                className="chat-list-item"
+                onClick={() => navigate(`/chat/${partner?._id}`)}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Avatar src={partner?.avatarUrl} name={partner?.name} size={52} online={onlineUsers.includes(partner?._id)} />
+                <div className="chat-list-info">
+                  <div className="chat-list-name">{partner?.name}</div>
+                  <div className="chat-list-preview">{chat.lastMessage || 'Start chatting...'}</div>
                 </div>
+                <div className="chat-list-time">{timeAgo(chat.lastMessageTime)}</div>
+              </motion.div>
+            );
+          })}
+
+          {/* New chat suggestions */}
+          {filteredUsers.length > 0 && (
+            <div>
+              <div style={{ padding: '12px 16px 8px', fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>
+                Start a conversation
+              </div>
+              {filteredUsers.map(u => (
+                <motion.div
+                  key={u._id}
+                  className="chat-list-item"
+                  onClick={() => navigate(`/chat/${u._id}`)}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Avatar src={u.avatarUrl} name={u.name} size={52} online={onlineUsers.includes(u._id)} />
+                  <div className="chat-list-info">
+                    <div className="chat-list-name">{u.name}</div>
+                    <div className="chat-list-preview">{u.email}</div>
+                  </div>
+                </motion.div>
               ))}
-            </section>
+            </div>
           )}
         </>
       )}
+
+      <style>{`
+        .chat-list-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .chat-list-item:hover {
+          background: var(--bg-hover);
+        }
+        .partner-chat-item {
+          background: rgba(124, 58, 237, 0.05);
+          border-left: 3px solid var(--accent);
+        }
+        .chat-list-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .chat-list-name {
+          font-weight: 600;
+          font-size: 15px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .chat-list-preview {
+          font-size: 13px;
+          color: var(--text-muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .chat-list-time {
+          font-size: 12px;
+          color: var(--text-muted);
+          flex-shrink: 0;
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../lib/api';
-import { API_ROUTES } from '../config/apiRoutes';
 import { connectSocket, disconnectSocket } from '../lib/socket';
 
 const AuthContext = createContext({
@@ -18,56 +17,51 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const stored = localStorage.getItem('acn_user');
+    if (stored) {
       try {
-        const data = await api.get(API_ROUTES.AUTH_ME);
-        setUser(data);
-        connectSocket(data._id);
-      } catch (err) {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkAuth();
+        const parsed = JSON.parse(stored);
+        setUser(parsed);
+        connectSocket(parsed._id);
+      } catch { localStorage.removeItem('acn_user'); }
+    }
+    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
-    const data = await api.post(API_ROUTES.AUTH_LOGIN, { email, password });
+    const data = await api.post('/api/auth/login', { email, password });
+    localStorage.setItem('acn_user', JSON.stringify(data));
     setUser(data);
     connectSocket(data._id);
     return data;
   };
 
   const signup = async (formData) => {
-    const data = await api.post(API_ROUTES.AUTH_REGISTER, formData);
+    const data = await api.post('/api/auth/register', formData);
+    localStorage.setItem('acn_user', JSON.stringify(data));
     setUser(data);
     connectSocket(data._id);
     return data;
   };
 
   const googleLogin = async (idToken) => {
-    const data = await api.post(API_ROUTES.AUTH_GOOGLE, { idToken });
+    const data = await api.post('/api/auth/google', { idToken });
+    localStorage.setItem('acn_user', JSON.stringify(data));
     setUser(data);
     connectSocket(data._id);
     return data;
   };
 
-  const logout = async () => {
-    try {
-      await api.post(API_ROUTES.AUTH_LOGOUT);
-    } catch (e) {}
+  const logout = () => {
+    localStorage.removeItem('acn_user');
     disconnectSocket();
     setUser(null);
   };
 
   const updateUser = (updates) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      // Prevent overwriting critical auth fields
-      const { _id, email, role, ...safeUpdates } = updates;
-      return { ...prev, ...safeUpdates };
-    });
+    const updated = { ...user, ...updates };
+    localStorage.setItem('acn_user', JSON.stringify(updated));
+    setUser(updated);
   };
 
   return (

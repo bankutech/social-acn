@@ -12,15 +12,15 @@ export default function AIFloatingAssistant() {
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     const userMsg = input;
-    setMessages((prev) => [...prev, { role: 'user', content: userMsg }]);
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setInput('');
     setLoading(true);
 
     try {
       const res = await api.post('/api/ai/ask', { question: userMsg });
-      setMessages((prev) => [...prev, { role: 'ai', content: res.answer }]);
+      setMessages(prev => [...prev, { role: 'ai', content: res.answer }]);
     } catch (err) {
-      setMessages((prev) => [...prev, { role: 'ai', content: 'Oops! I hit a snag. Try again?' }]);
+      setMessages(prev => [...prev, { role: 'ai', content: 'Oops! I hit a snag. Try again?' }]);
     } finally {
       setLoading(false);
     }
@@ -35,19 +35,19 @@ export default function AIFloatingAssistant() {
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          position: 'fixed',
-          bottom: '180px',
-          right: '24px',
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: 'var(--accent)',
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 8px 24px rgba(34, 211, 238, 0.4)',
-          zIndex: 999,
+             position: 'fixed',
+             bottom: '180px',
+             right: '24px',
+             width: '56px',
+             height: '56px',
+             borderRadius: '50%',
+             background: 'linear-gradient(135deg, #22d3ee, #0891b2)',
+             color: 'white',
+             display: 'flex',
+             alignItems: 'center',
+             justifyContent: 'center',
+             boxShadow: '0 8px 24px rgba(34, 211, 238, 0.4)',
+             zIndex: 999
         }}
       >
         {isOpen ? <X size={24} /> : <Sparkles size={24} />}
@@ -84,11 +84,11 @@ export default function AIFloatingAssistant() {
             </div>
 
             <div className="ai-window-input">
-              <input
-                placeholder="Ask your buddy..."
+              <input 
+                placeholder="Ask your buddy..." 
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
               />
               <button onClick={handleSend} disabled={loading}>
                 <Send size={16} />
@@ -106,8 +106,8 @@ export default function AIFloatingAssistant() {
           width: 320px;
           height: 400px;
           background: rgba(15, 15, 18, 0.95);
-          
-          
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 24px;
           display: flex;
@@ -132,7 +132,7 @@ export default function AIFloatingAssistant() {
           gap: 8px;
           font-weight: 700;
           font-size: 14px;
-          color: var(--text-muted);
+          color: #22d3ee;
         }
 
         .ai-window-messages {
@@ -153,7 +153,7 @@ export default function AIFloatingAssistant() {
         }
         .mini-msg.user {
           align-self: flex-end;
-          background: var(--text-muted);
+          background: #22d3ee;
           color: black;
           border-bottom-right-radius: 2px;
         }
@@ -180,7 +180,7 @@ export default function AIFloatingAssistant() {
           font-size: 13px;
         }
         .ai-window-input button {
-          background: var(--text-muted);
+          background: #22d3ee;
           color: black;
           width: 36px;
           height: 36px;

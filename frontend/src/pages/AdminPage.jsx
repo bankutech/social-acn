@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
-import SkeletonLoader from '../components/Skeleton';
+import SkeletonLoader from '../components/SkeletonLoader';
 import { motion } from 'framer-motion';
 import { Users, Mail } from 'lucide-react';
 
@@ -28,14 +28,11 @@ export default function AdminPage() {
 
   return (
     <div className="page-container" style={{ padding: 0 }}>
-      <div
-        className="page-header"
-        style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}
-      >
+      <div className="page-header" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Users size={24} />
         <h1>Admin Dashboard</h1>
       </div>
-
+      
       <div style={{ padding: '16px' }}>
         <div style={{ marginBottom: '16px', fontSize: '14px', color: 'var(--text-muted)' }}>
           Total registered users: {usersList.length}
@@ -65,22 +62,14 @@ export default function AdminPage() {
                   padding: '12px',
                   background: 'var(--bg-secondary)',
                   borderRadius: '12px',
-                  border: '1px solid var(--border-light)',
+                  border: '1px solid var(--border-light)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Avatar src={u.avatarUrl} name={u.name} size={48} />
                   <div>
                     <div style={{ fontWeight: 600 }}>{u.name}</div>
-                    <div
-                      style={{
-                        fontSize: '13px',
-                        color: 'var(--text-muted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Mail size={12} /> {u.email}
                     </div>
                   </div>
