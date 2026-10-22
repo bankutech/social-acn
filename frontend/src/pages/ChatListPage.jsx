@@ -28,7 +28,7 @@ export default function ChatListPage() {
       });
     });
     // Get initial online users
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/online-users`)
+    fetch(`${(import.meta.env.VITE_API_URL !== undefined && import.meta.env.VITE_API_URL !== null) ? import.meta.env.VITE_API_URL : (import.meta.env.DEV ? 'http://localhost:5000' : '')}/api/online-users`)
       .then(r => r.json())
       .then(setOnlineUsers)
       .catch(() => {});

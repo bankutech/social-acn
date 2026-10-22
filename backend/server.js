@@ -17,7 +17,10 @@ const io = new Server(server, { cors: { origin: '*' } });
 let dbConnected = false;
 
 // Middleware to check DB status
-const checkDbConnection = (req, res, next) => {
+const checkDbConnection = async (req, res, next) => {
+    if (!dbConnected && !req.path.includes('/health')) {
+        await connectDB();
+    }
     if (!dbConnected && !req.path.includes('/health')) {
         return res.status(503).json({ 
             message: 'Database is currently unavailable. Please check the backend logs for network/whitelist issues.',
@@ -80,31 +83,77 @@ app.get('/api/health', (req, res) => {
 });
 
 // MongoDB Connection
+let mongodInstance = null;
+let connectingPromise = null;
+
 const connectDB = async () => {
-    console.log('🔄 Attempting to connect to MongoDB...');
-    try {
-        const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/acn_plus';
-        if (!process.env.MONGO_URI) {
-            console.warn('⚠️ WARNING: MONGO_URI is not set, falling back to localhost.');
-        }
-        await mongoose.connect(uri);
-        console.log('✅ MongoDB Connected successfully');
+    if (mongoose.connection.readyState >= 1) {
         dbConnected = true;
-    } catch (err) {
-        console.error('❌ CRITICAL: MongoDB Connection Failed.');
-        console.error('ERROR MESSAGE:', err.message);
-        
-        if (err.message.includes('IP address') || err.message.includes('buffering timed out')) {
-            console.error('👉 ACTION REQUIRED: Your IP is likely not whitelisted. Go to MongoDB Atlas -> Network Access and add 0.0.0.0/0.');
-        } else if (err.message.includes('Authentication failed')) {
-            console.error('👉 ACTION REQUIRED: Authentication failed. Please check your password in .env.');
-        }
-        
-        dbConnected = false;
-        // Attempt to reconnect every 30 seconds
-        console.log('🔄 Will retry connection in 30 seconds...');
-        setTimeout(connectDB, 30000);
+        return;
     }
+    if (connectingPromise) {
+        return connectingPromise;
+    }
+
+    connectingPromise = (async () => {
+        console.log('🔄 Attempting to connect to MongoDB...');
+        const uri = process.env.MONGO_URI;
+
+        // 1. If remote Atlas URI is provided, attempt connection directly
+        if (uri && (uri.includes('mongodb+srv') || uri.includes('@'))) {
+            try {
+                await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
+                console.log('✅ Connected to MongoDB Atlas successfully');
+                dbConnected = true;
+                return;
+            } catch (err) {
+                console.error('❌ CRITICAL: Remote MongoDB Connection Failed.');
+                console.error('ERROR MESSAGE:', err.message);
+                if (err.message.includes('IP address') || err.message.includes('buffering timed out')) {
+                    console.error('👉 ACTION REQUIRED: Whitelist your IP in MongoDB Atlas (Network Access -> 0.0.0.0/0).');
+                } else if (err.message.includes('Authentication failed')) {
+                    console.error('👉 ACTION REQUIRED: Authentication failed. Please check your password in .env.');
+                }
+                dbConnected = false;
+                return;
+            }
+        }
+
+        // 2. Try local MongoDB first if running
+        try {
+            const localUri = uri || 'mongodb://127.0.0.1:27017/acn_plus';
+            await mongoose.connect(localUri, { serverSelectionTimeoutMS: 2000 });
+            console.log('✅ Connected to local MongoDB successfully');
+            dbConnected = true;
+        } catch (localErr) {
+            // 3. Fallback to in-memory MongoDB server for local development
+            if (process.env.VERCEL) {
+                console.error('❌ MONGO_URI is required when running on Vercel.');
+                dbConnected = false;
+                return;
+            }
+            console.warn('⚠️ Local MongoDB not running on port 27017. Starting in-memory MongoDB server...');
+            try {
+                const { MongoMemoryServer } = require('mongodb-memory-server');
+                if (!mongodInstance) {
+                    mongodInstance = await MongoMemoryServer.create({
+                        binary: { arch: 'x64', version: '7.0.14' }
+                    });
+                }
+                const memUri = mongodInstance.getUri();
+                await mongoose.connect(memUri);
+                console.log('✅ Connected to in-memory MongoDB at', memUri);
+                dbConnected = true;
+            } catch (memErr) {
+                console.error('❌ Failed to start in-memory MongoDB:', memErr.message);
+                dbConnected = false;
+            }
+        }
+    })().finally(() => {
+        connectingPromise = null;
+    });
+
+    return connectingPromise;
 };
 
 connectDB();
@@ -230,14 +279,13 @@ app.get('/api/online-users', (req, res) => {
 });
 
 // ==================== Cleanup Jobs ====================
-// Run every hour to clean up expired partner messages & images
-cron.schedule('0 * * * *', () => {
-    console.log('[CRON] Running partner message cleanup...');
-    cleanupExpiredPartnerMessages();
-});
-
-// Also run on startup
-setTimeout(() => cleanupExpiredPartnerMessages(), 5000);
+if (require.main === module && !process.env.VERCEL) {
+    cron.schedule('0 * * * *', () => {
+        console.log('[CRON] Running partner message cleanup...');
+        cleanupExpiredPartnerMessages();
+    });
+    setTimeout(() => cleanupExpiredPartnerMessages(), 5000);
+}
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -249,4 +297,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if (require.main === module && !process.env.VERCEL) {
+    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;
