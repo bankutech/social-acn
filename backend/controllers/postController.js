@@ -84,7 +84,7 @@ exports.getFeed = async (req, res) => {
         const followingIds = currentUser.following.map(user => user._id);
         followingIds.push(req.user.id); // Include user's own posts
 
-        const posts = await Post.find({ 
+        let posts = await Post.find({ 
             author: { $in: followingIds },
             visibility: { $in: ['public', 'followers'] }
         })
@@ -94,6 +94,16 @@ exports.getFeed = async (req, res) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
+
+        // Fallback: if user follows no one or has empty feed, show latest public posts
+        if (posts.length === 0 && page === 1) {
+            posts = await Post.find({ visibility: { $ne: 'private' } })
+                .populate('author', 'name avatarUrl')
+                .populate('likes', 'name avatarUrl')
+                .populate('comments.author', 'name avatarUrl')
+                .sort({ createdAt: -1 })
+                .limit(limit);
+        }
 
         res.json(posts);
     } catch (error) {
