@@ -1,5 +1,6 @@
 const Group = require('../models/Group');
 const Post = require('../models/Post');
+const mongoose = require('mongoose');
 
 exports.createGroup = async (req, res) => {
     try {
@@ -41,6 +42,9 @@ exports.listGroups = async (req, res) => {
 
 exports.getGroup = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
         const group = await Group.findById(req.params.id)
             .populate('admin', 'name avatarUrl')
             .populate('members', 'name avatarUrl');
@@ -54,6 +58,9 @@ exports.getGroup = async (req, res) => {
 
 exports.joinGroup = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
         const userId = req.user.id || req.user._id;
         const group = await Group.findById(req.params.id);
         if (!group) return res.status(404).json({ message: 'Group not found' });
@@ -70,6 +77,9 @@ exports.joinGroup = async (req, res) => {
 
 exports.leaveGroup = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
         const userId = req.user.id || req.user._id;
         const group = await Group.findById(req.params.id);
         if (!group) return res.status(404).json({ message: 'Group not found' });
@@ -87,6 +97,9 @@ exports.leaveGroup = async (req, res) => {
 
 exports.getGroupPosts = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
         const group = await Group.findById(req.params.id);
         if (!group) return res.status(404).json({ message: 'Group not found' });
         const posts = await Post.find({ group: req.params.id })
@@ -103,6 +116,9 @@ exports.getGroupPosts = async (req, res) => {
 
 exports.createGroupPost = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
         const userId = req.user.id || req.user._id;
         const group = await Group.findById(req.params.id);
         if (!group) return res.status(404).json({ message: 'Group not found' });

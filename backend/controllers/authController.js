@@ -87,18 +87,20 @@ exports.loginUser = async (req, res) => {
         }
 
         if (user && (await user.matchPassword(password))) {
-            user.lastLogin = Date.now();
-
             const now = new Date();
-            const lastLog = new Date(user.lastLogin);
-            const diffTime = Math.abs(now - lastLog);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 1) {
-                user.studyStreak += 1;
-            } else if (diffDays > 1) {
-                user.studyStreak = 0;
+            const prevLogin = user.lastLogin;
+            if (prevLogin) {
+                const diffTime = Math.abs(now.getTime() - new Date(prevLogin).getTime());
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays === 1) {
+                    user.studyStreak = (user.studyStreak || 0) + 1;
+                } else if (diffDays > 1) {
+                    user.studyStreak = 1;
+                }
+            } else {
+                user.studyStreak = 1;
             }
+            user.lastLogin = now;
 
             await user.save();
 
@@ -156,18 +158,20 @@ exports.googleLogin = async (req, res) => {
             if (!user.googleId) {
                 user.googleId = googleId;
             }
-            user.lastLogin = Date.now();
-            
             const now = new Date();
-            const lastLog = new Date(user.lastLogin);
-            const diffTime = Math.abs(now - lastLog);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 1) {
-                user.studyStreak += 1;
-            } else if (diffDays > 1) {
-                user.studyStreak = 0;
+            const prevLogin = user.lastLogin;
+            if (prevLogin) {
+                const diffTime = Math.abs(now.getTime() - new Date(prevLogin).getTime());
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays === 1) {
+                    user.studyStreak = (user.studyStreak || 0) + 1;
+                } else if (diffDays > 1) {
+                    user.studyStreak = 1;
+                }
+            } else {
+                user.studyStreak = 1;
             }
+            user.lastLogin = now;
             
             await user.save();
         }

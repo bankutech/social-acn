@@ -4,6 +4,7 @@ const { protect } = require('../middleware/auth');
 const { toggleBookmark, getBookmarks } = require('../controllers/bookmarkController');
 
 router.get('/', protect, getBookmarks);
+router.post('/:id', protect, toggleBookmark);
 router.post('/:id/bookmark', protect, toggleBookmark);
 
 module.exports = router;

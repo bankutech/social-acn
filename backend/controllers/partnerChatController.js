@@ -21,7 +21,9 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(String(id));
 
 // Helper: check if user is participant
 const isParticipant = (chat, userId) => {
-    return chat.user_one_id.toString() === userId || chat.user_two_id.toString() === userId;
+    const id1 = (chat.user_one_id?._id || chat.user_one_id || '').toString();
+    const id2 = (chat.user_two_id?._id || chat.user_two_id || '').toString();
+    return id1 === String(userId) || id2 === String(userId);
 };
 
 // GET or CREATE partner chat
@@ -157,7 +159,7 @@ exports.sendPartnerMessage = async (req, res) => {
             content: content || '',
             image_url: image_url || '',
             cloudinary_public_id: cloudinary_public_id || '',
-            replyTo: replyToId || null,
+            replyTo: (replyToId && isValidObjectId(replyToId)) ? replyToId : null,
             created_at: now,
             expires_at: chat.expires_enabled ? expiresAt : new Date('9999-12-31')
         });

@@ -1,10 +1,15 @@
 const User = require('../models/User');
 const Post = require('../models/Post');
+const mongoose = require('mongoose');
 
 exports.toggleBookmark = async (req, res) => {
     try {
         const userId = req.user.id || req.user._id;
         const postId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
 
         const post = await Post.findById(postId);
         if (!post) return res.status(404).json({ message: 'Post not found' });
