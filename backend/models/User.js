@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema({
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     studyStreak: { type: Number, default: 0 },
     lastLogin: { type: Date, default: Date.now },
+    lastActive: { type: Date, default: Date.now, index: true },
     pushSubscriptions: [{
         endpoint: String,
         keys: {

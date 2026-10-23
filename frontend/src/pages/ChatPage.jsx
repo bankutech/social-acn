@@ -28,6 +28,7 @@ export default function ChatPage() {
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMsg, setEditingMsg] = useState(null);
   const [selectedMsgId, setSelectedMsgId] = useState(null);
+  const [isOnline, setIsOnline] = useState(false);
 
   const messagesEndRef = useRef(null);
   const typingTimeout = useRef(null);
@@ -35,6 +36,8 @@ export default function ChatPage() {
 
   useEffect(() => {
     loadChat();
+    checkOnline();
+
     const socket = getSocket();
 
     socket.on('new_message', (data) => {
@@ -59,13 +62,54 @@ export default function ChatPage() {
       if (uid === userId) setTyping(isTyping);
     });
 
+    socket.on('user_status', ({ userId: uid, online }) => {
+      if (uid === userId) setIsOnline(online);
+    });
+
+    // 2.5s silent background sync for 100% reliable real-time delivery
+    const syncSilently = async () => {
+      if (document.hidden) return;
+      checkOnline();
+      try {
+        const data = await api.get(`/api/chat/${userId}`);
+        if (data && Array.isArray(data.messages)) {
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m._id));
+            const newOnes = data.messages.filter(m => !existingIds.has(m._id));
+            if (newOnes.length > 0) {
+              const pendingIds = new Set(data.messages.map(dm => dm._id));
+              const filtered = prev.filter(m => !m.pending || !pendingIds.has(m._id));
+              return [...filtered, ...newOnes];
+            }
+            return prev;
+          });
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(syncSilently, 2500);
+    const onVis = () => { if (!document.hidden) syncSilently(); };
+    document.addEventListener('visibilitychange', onVis);
+
     return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVis);
       socket.off('new_message');
       socket.off('message_edited');
       socket.off('message_deleted');
       socket.off('user_typing');
+      socket.off('user_status');
     };
   }, [userId, user?._id]);
+
+  const checkOnline = async () => {
+    try {
+      const onlines = await api.get('/api/online-users');
+      if (Array.isArray(onlines)) {
+        setIsOnline(onlines.includes(userId));
+      }
+    } catch {}
+  };
 
   useEffect(() => {
     return () => {
@@ -246,11 +290,11 @@ export default function ChatPage() {
         </button>
         
         <div className="partner-info-v2" onClick={() => navigate(`/profile/${userId}`)}>
-          <Avatar src={partner?.avatarUrl} name={partner?.name} size={40} />
+          <Avatar src={partner?.avatarUrl} name={partner?.name} size={40} online={isOnline} />
           <div className="partner-text-v2">
             <span className="partner-name-v2">{partner?.name || 'Chat'}</span>
-            <span className={`status-v2 ${typing ? 'typing' : 'online'}`}>
-              {typing ? 'typing...' : 'online'}
+            <span className={`status-v2 ${typing ? 'typing' : (isOnline ? 'online' : 'offline')}`}>
+              {typing ? 'typing...' : (isOnline ? 'Active now' : 'Offline')}
             </span>
           </div>
         </div>
@@ -458,7 +502,9 @@ export default function ChatPage() {
           font-size: 11px;
           color: rgba(255,255,255,0.4);
         }
+        .status-v2.online { color: #22c55e; font-weight: 600; }
         .status-v2.typing { color: #22d3ee; }
+        .status-v2.offline { color: rgba(255, 255, 255, 0.4); }
 
         .chat-menu-v2 {
           position: absolute;

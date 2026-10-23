@@ -22,7 +22,8 @@ export function AuthProvider({ children }) {
       try {
         const parsed = JSON.parse(stored);
         setUser(parsed);
-        connectSocket(parsed._id);
+        const uid = parsed._id || parsed.id;
+        if (uid) connectSocket(uid);
       } catch { localStorage.removeItem('acn_user'); }
     }
     setLoading(false);
@@ -39,7 +40,8 @@ export function AuthProvider({ children }) {
     const data = await api.post('/api/auth/login', { email, password });
     localStorage.setItem('acn_user', JSON.stringify(data));
     setUser(data);
-    connectSocket(data._id);
+    const uid = data._id || data.id;
+    if (uid) connectSocket(uid);
     return data;
   };
 
@@ -47,7 +49,8 @@ export function AuthProvider({ children }) {
     const data = await api.post('/api/auth/register', formData);
     localStorage.setItem('acn_user', JSON.stringify(data));
     setUser(data);
-    connectSocket(data._id);
+    const uid = data._id || data.id;
+    if (uid) connectSocket(uid);
     return data;
   };
 
@@ -55,7 +58,8 @@ export function AuthProvider({ children }) {
     const data = await api.post('/api/auth/google', { idToken });
     localStorage.setItem('acn_user', JSON.stringify(data));
     setUser(data);
-    connectSocket(data._id);
+    const uid = data._id || data.id;
+    if (uid) connectSocket(uid);
     return data;
   };
 

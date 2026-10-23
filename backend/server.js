@@ -204,6 +204,10 @@ io.on('connection', (socket) => {
         }
         connectedUsers.get(uid).add(socket.id);
 
+        // Update database active timestamp (non-blocking)
+        const User = require('./models/User');
+        User.updateOne({ _id: uid }, { $set: { lastActive: new Date() } }).catch(() => {});
+
         // Broadcast online status
         io.emit('user_status', { userId: uid, online: true });
         console.log(`User ${uid} joined room user_${uid} with socket ${socket.id}`);
@@ -325,9 +329,20 @@ io.on('connection', (socket) => {
     });
 });
 
-// Get online users endpoint
-app.get('/api/online-users', (req, res) => {
-    res.json(Array.from(connectedUsers.keys()));
+// Get online users endpoint (combines real-time sockets + database lastActive window)
+app.get('/api/online-users', async (req, res) => {
+    try {
+        const User = require('./models/User');
+        const activeThreshold = new Date(Date.now() - 3 * 60 * 1000); // 3 minutes
+        const dbUsers = await User.find({ lastActive: { $gte: activeThreshold } }).select('_id').lean();
+        
+        const onlineSet = new Set(Array.from(connectedUsers.keys()));
+        dbUsers.forEach(u => onlineSet.add(u._id.toString()));
+        
+        res.json(Array.from(onlineSet));
+    } catch (err) {
+        res.json(Array.from(connectedUsers.keys()));
+    }
 });
 
 // ==================== Cleanup Jobs ====================

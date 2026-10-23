@@ -35,6 +35,7 @@ export default function PartnerChatPage() {
   const [typing, setTyping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
   const [, forceUpdate] = useState(0);
 
   // Reply & Edit State
@@ -66,6 +67,18 @@ export default function PartnerChatPage() {
     const socket = getSocket();
     socket.emit('join_partner_chat', chat._id);
 
+    const checkOnline = async () => {
+      try {
+        const onlines = await api.get('/api/online-users');
+        if (Array.isArray(onlines)) setIsOnline(onlines.includes(partnerId));
+      } catch {}
+    };
+    checkOnline();
+
+    socket.on('user_status', ({ userId: uid, online }) => {
+      if (uid === partnerId) setIsOnline(online);
+    });
+
     socket.on('partner_new_message', (msg) => {
       const sid = msg.sender_id?._id || msg.sender_id;
       if (String(sid) !== String(user?._id)) {
@@ -94,15 +107,43 @@ export default function PartnerChatPage() {
       if (tname && THEMES[tname]) setTheme(tname);
     });
 
+    // 2.5s silent background sync for guaranteed real-time delivery
+    const syncSilently = async () => {
+      if (document.hidden) return;
+      checkOnline();
+      try {
+        const msgs = await api.get(`/api/partner-chat/${chat._id}/messages`);
+        if (Array.isArray(msgs)) {
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m._id));
+            const newOnes = msgs.filter(m => !existingIds.has(m._id));
+            if (newOnes.length > 0) {
+              const pendingIds = new Set(msgs.map(dm => dm._id));
+              const filtered = prev.filter(m => !m.pending || !pendingIds.has(m._id));
+              return [...filtered, ...newOnes];
+            }
+            return prev;
+          });
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(syncSilently, 2500);
+    const onVis = () => { if (!document.hidden) syncSilently(); };
+    document.addEventListener('visibilitychange', onVis);
+
     return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVis);
       if (chat?._id) socket.emit('leave_partner_chat', chat._id);
       socket.off('partner_new_message');
       socket.off('partner_message_edited');
       socket.off('partner_message_deleted');
       socket.off('partner_user_typing');
       socket.off('partner_theme_change');
+      socket.off('user_status');
     };
-  }, [chat?._id, user?._id]);
+  }, [chat?._id, user?._id, partnerId]);
 
   const loadChat = async () => {
     try {
@@ -313,14 +354,14 @@ export default function PartnerChatPage() {
         </button>
 
         <div className="pc-header-info" onClick={() => navigate(`/profile/${partnerId}`)}>
-          <Avatar src={partner?.avatarUrl} name={partner?.name} size={38} />
+          <Avatar src={partner?.avatarUrl} name={partner?.name} size={38} online={isOnline} />
           <div className="pc-header-text">
             <div className="pc-header-name">
               {partner?.name || 'Partner'}
               <span className="pc-private-badge"><ShieldCheck size={10} /> Private</span>
             </div>
-            <div className="pc-header-sub" style={{ color: typing ? '#4ade80' : 'rgba(255,255,255,0.4)' }}>
-              {typing ? 'typing...' : 'Partner chat'}
+            <div className="pc-header-sub" style={{ color: typing ? '#4ade80' : (isOnline ? '#22c55e' : 'rgba(255,255,255,0.4)') }}>
+              {typing ? 'typing...' : (isOnline ? 'Active now' : 'Partner chat')}
             </div>
           </div>
         </div>

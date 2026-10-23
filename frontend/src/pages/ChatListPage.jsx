@@ -20,22 +20,58 @@ export default function ChatListPage() {
 
   useEffect(() => {
     loadChats();
+    fetchOnlineUsers();
+
     const socket = getSocket();
-    socket.on('user_status', ({ userId, online }) => {
+    const handleStatus = ({ userId, online }) => {
       setOnlineUsers(prev => {
         if (online) return [...new Set([...prev, userId])];
         return prev.filter(id => id !== userId);
       });
-    });
-    // Get initial online users
-    fetch(`${(import.meta.env.VITE_API_URL !== undefined && import.meta.env.VITE_API_URL !== null) ? import.meta.env.VITE_API_URL : (import.meta.env.DEV ? 'http://localhost:5000' : '')}/api/online-users`)
-      .then(r => r.json())
-      .then(setOnlineUsers)
-      .catch(() => {});
-    return () => { socket.off('user_status'); };
+    };
+
+    const handleNewMsg = () => {
+      loadChats(false);
+    };
+
+    socket.on('user_status', handleStatus);
+    socket.on('new_message', handleNewMsg);
+    socket.on('partner_new_message', handleNewMsg);
+
+    // Fast polling every 5s for cross-container and cross-network reliability
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchOnlineUsers();
+        loadChats(false);
+      }
+    }, 5000);
+
+    const onVisibility = () => {
+      if (!document.hidden) {
+        fetchOnlineUsers();
+        loadChats(false);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      socket.off('user_status', handleStatus);
+      socket.off('new_message', handleNewMsg);
+      socket.off('partner_new_message', handleNewMsg);
+    };
   }, []);
 
-  const loadChats = async () => {
+  const fetchOnlineUsers = async () => {
+    try {
+      const data = await api.get('/api/online-users');
+      if (Array.isArray(data)) setOnlineUsers(data);
+    } catch {}
+  };
+
+  const loadChats = async (showSkeleton = true) => {
+    if (showSkeleton && chats.length === 0) setLoading(true);
     try {
       const [chatsData, usersData, pChats] = await Promise.all([
         api.get('/api/chat').catch(() => []),

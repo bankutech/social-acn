@@ -30,17 +30,29 @@ exports.createStory = async (req, res) => {
 
 exports.getStories = async (req, res) => {
     try {
-        const currentUser = await User.findById(req.user.id).populate('following');
-        const followingIds = currentUser?.following?.map(user => user._id) || [];
-        followingIds.push(req.user.id);
+        const userId = req.user._id || req.user.id;
+        const currentUser = await User.findById(userId).populate('following').lean();
+        const followingSet = new Set((currentUser?.following || []).map(u => (u._id || u).toString()));
+        followingSet.add(userId.toString());
 
+        // Fetch all active stories from the last 24 hours
         const stories = await Story.find({ 
-            author: { $in: followingIds },
             createdAt: { $gt: new Date(Date.now() - 86400000) }
         })
         .populate('author', 'name avatarUrl')
         .sort({ createdAt: -1 })
         .lean();
+
+        // Sort so followed users and own stories appear first in the story tray, then community stories
+        stories.sort((a, b) => {
+            const aAuthorId = (a.author?._id || a.author)?.toString();
+            const bAuthorId = (b.author?._id || b.author)?.toString();
+            const aIsFollowed = followingSet.has(aAuthorId);
+            const bIsFollowed = followingSet.has(bAuthorId);
+            if (aIsFollowed && !bIsFollowed) return -1;
+            if (!aIsFollowed && bIsFollowed) return 1;
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        });
 
         res.json(stories);
     } catch (error) {

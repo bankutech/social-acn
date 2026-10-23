@@ -32,13 +32,34 @@ export default function FeedPage() {
     loadSuggestions();
     loadUnreadNotifications();
 
-    if (!user) return;
+    const onVis = () => {
+      if (!document.hidden) {
+        loadStories();
+        loadUnreadNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+
+    // Refresh stories every 25s
+    const storyInterval = setInterval(() => {
+      if (!document.hidden) loadStories();
+    }, 25000);
+
+    if (!user) return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      clearInterval(storyInterval);
+    };
+
     const socket = getSocket();
     const notifEvent = `notification_${user._id || user.id}`;
     const handleNotif = () => setUnreadNotifs(prev => prev + 1);
     socket.on(notifEvent, handleNotif);
 
-    return () => socket.off(notifEvent, handleNotif);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      clearInterval(storyInterval);
+      socket.off(notifEvent, handleNotif);
+    };
   }, [user]);
 
   const loadUnreadNotifications = async () => {

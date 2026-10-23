@@ -14,6 +14,9 @@ const protect = async (req, res, next) => {
             if (!req.user) {
                 return res.status(401).json({ message: 'Not authorized, user not found' });
             }
+
+            // Keep user activity timestamp fresh (non-blocking)
+            User.updateOne({ _id: decoded.id }, { $set: { lastActive: new Date() } }).catch(() => {});
             
             return next();
         } catch (error) {
