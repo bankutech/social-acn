@@ -11,31 +11,6 @@ exports.createReel = async (req, res) => {
         if (!title || typeof title !== 'string' || !title.trim() || !videoUrl || typeof videoUrl !== 'string' || !videoUrl.trim()) {
             return res.status(400).json({ message: 'Title and videoUrl are required' });
         }
-
-        // Handle demo mode
-        if (req.user._id === 'mock_id_123') {
-            // Return mock reel for demo user
-            const mockReel = {
-                _id: 'mock_reel_' + Date.now(),
-                author: {
-                    _id: 'mock_id_123',
-                    name: 'Demo Student',
-                    avatarUrl: 'https://i.pravatar.cc/150?u=mock'
-                },
-                title: title.trim(),
-                videoUrl,
-                thumbnailUrl,
-                category: 'Learn in 60 seconds',
-                hashtags: hashtags ? (Array.isArray(hashtags) ? hashtags : hashtags.split(',').map(tag => tag.trim())) : [],
-                likes: [],
-                comments: [],
-                duration: 60,
-                visibility: 'followers',
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
-            return res.status(201).json(mockReel);
-        }
         
         const reel = await Reel.create({
             author: req.user._id || req.user.id,
@@ -59,12 +34,6 @@ exports.createReel = async (req, res) => {
 
 exports.getReels = async (req, res) => {
     try {
-        // Handle demo mode
-        if (req.user._id === 'mock_id_123') {
-            // Return empty reels for demo user
-            return res.json([]);
-        }
-
         const currentUser = await User.findById(req.user.id).populate('following');
         const followingIds = currentUser?.following?.map(user => user._id) || [];
         followingIds.push(req.user.id);
@@ -190,7 +159,6 @@ exports.deleteReel = async (req, res) => {
 exports.getUserReels = async (req, res) => {
     try {
         const userId = req.params.userId;
-        if (userId === 'mock_id_123') return res.json([]);
 
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(404).json({ message: 'User not found' });

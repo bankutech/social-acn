@@ -338,6 +338,120 @@ describe('Chat & Real-Time Socket Suite', () => {
             assert.strictEqual(aGotPartnerMsg, true, 'Participant Alice should receive partner message');
             assert.strictEqual(cGotPartnerMsg, false, 'Outsider Charlie should NOT receive partner message');
         });
+
+        it('should enforce partner chat edge cases, input validation, and message edit/delete authorization', async () => {
+            // Cannot chat with oneself
+            const selfRes = await apiRequest(`/api/partner-chat/${userA._id}`, { token: tokenA });
+            assert.strictEqual(selfRes.status, 400);
+
+            // Invalid partner ID format
+            const invalidIdRes = await apiRequest('/api/partner-chat/invalid-id-format', { token: tokenA });
+            assert.strictEqual(invalidIdRes.status, 400);
+
+            // Non-existent partner ID (valid ObjectId format)
+            const nonExistentRes = await apiRequest('/api/partner-chat/507f1f77bcf86cd799439011', { token: tokenA });
+            assert.strictEqual(nonExistentRes.status, 404);
+
+            // Create valid partner chat between Alice and Bob
+            const chatRes = await apiRequest(`/api/partner-chat/${userB._id}`, { token: tokenA });
+            assert.strictEqual(chatRes.status, 200);
+            const chatId = chatRes.data._id;
+
+            // Invalid chat ID operations
+            const invalidMsgs = await apiRequest('/api/partner-chat/invalid-chat/messages', { token: tokenA });
+            assert.strictEqual(invalidMsgs.status, 404);
+
+            const invalidSend = await apiRequest('/api/partner-chat/invalid-chat/message', {
+                method: 'POST',
+                token: tokenA,
+                body: { content: 'hello' }
+            });
+            assert.strictEqual(invalidSend.status, 404);
+
+            const invalidTheme = await apiRequest('/api/partner-chat/invalid-chat/theme', {
+                method: 'PUT',
+                token: tokenA,
+                body: { theme_name: 'ocean_blue' }
+            });
+            assert.strictEqual(invalidTheme.status, 404);
+
+            // Empty message rejected
+            const emptyMsg = await apiRequest(`/api/partner-chat/${chatId}/message`, {
+                method: 'POST',
+                token: tokenA,
+                body: { content: '   ' }
+            });
+            assert.strictEqual(emptyMsg.status, 400);
+
+            // Outsider Charlie forbidden from sending or accessing messages
+            const outsiderAccess = await apiRequest(`/api/partner-chat/${chatId}/messages`, { token: tokenC });
+            assert.strictEqual(outsiderAccess.status, 403);
+
+            const outsiderSend = await apiRequest(`/api/partner-chat/${chatId}/message`, {
+                method: 'POST',
+                token: tokenC,
+                body: { content: 'I am spying' }
+            });
+            assert.strictEqual(outsiderSend.status, 403);
+
+            // Valid send by Alice
+            const sendRes = await apiRequest(`/api/partner-chat/${chatId}/message`, {
+                method: 'POST',
+                token: tokenA,
+                body: { content: 'Original partner message' }
+            });
+            assert.strictEqual(sendRes.status, 201);
+            const messageId = sendRes.data._id;
+
+            // Charlie tries to edit Alice's partner message -> 403
+            const outsiderEdit = await apiRequest(`/api/partner-chat/message/${messageId}`, {
+                method: 'PUT',
+                token: tokenC,
+                body: { content: 'Tampered content' }
+            });
+            assert.strictEqual(outsiderEdit.status, 403);
+
+            // Alice edits her partner message -> 200
+            const authorEdit = await apiRequest(`/api/partner-chat/message/${messageId}`, {
+                method: 'PUT',
+                token: tokenA,
+                body: { content: 'Edited partner message' }
+            });
+            assert.strictEqual(authorEdit.status, 200);
+            assert.strictEqual(authorEdit.data.content, 'Edited partner message');
+            assert.strictEqual(authorEdit.data.isEdited, true);
+
+            // Charlie tries to delete Alice's partner message -> 403
+            const outsiderDel = await apiRequest(`/api/partner-chat/message/${messageId}`, {
+                method: 'DELETE',
+                token: tokenC
+            });
+            assert.strictEqual(outsiderDel.status, 403);
+
+            // Alice deletes her partner message -> 200
+            const authorDel = await apiRequest(`/api/partner-chat/message/${messageId}`, {
+                method: 'DELETE',
+                token: tokenA
+            });
+            assert.strictEqual(authorDel.status, 200);
+
+            // Update theme by participant -> 200
+            const themeRes = await apiRequest(`/api/partner-chat/${chatId}/theme`, {
+                method: 'PUT',
+                token: tokenA,
+                body: { theme_name: 'cyberpunk_neon' }
+            });
+            assert.strictEqual(themeRes.status, 200);
+            assert.strictEqual(themeRes.data.theme.theme_name, 'cyberpunk_neon');
+
+            // Outsider Charlie updating theme -> 403
+            const outsiderTheme = await apiRequest(`/api/partner-chat/${chatId}/theme`, {
+                method: 'PUT',
+                token: tokenC,
+                body: { theme_name: 'hacked_theme' }
+            });
+            assert.strictEqual(outsiderTheme.status, 403);
+        });
     });
 });
 

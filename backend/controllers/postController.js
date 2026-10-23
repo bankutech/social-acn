@@ -5,13 +5,6 @@ const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 
-const getDemoStore = () => {
-    if (!global.__acn_demo_store) {
-        global.__acn_demo_store = { posts: [] };
-    }
-    return global.__acn_demo_store;
-};
-
 exports.createPost = async (req, res) => {
     try {
         const { content, type, imageUrl, codeSnippet, codeLanguage } = req.body;
@@ -22,33 +15,6 @@ exports.createPost = async (req, res) => {
             (typeof codeSnippet === 'string' && codeSnippet.trim().length > 0);
         if (!hasSomething) {
             return res.status(400).json({ message: 'Post must have content, image, or code.' });
-        }
-        
-        // Handle demo mode
-        if (req.user._id === 'mock_id_123') {
-            // Return mock post for demo user
-            const mockPost = {
-                _id: 'mock_post_' + Date.now(),
-                author: {
-                    _id: 'mock_id_123',
-                    name: 'Demo Student',
-                    avatarUrl: 'https://i.pravatar.cc/150?u=mock'
-                },
-                content: content || '',
-                type: type || 'text',
-                imageUrl,
-                codeSnippet,
-                codeLanguage,
-                likes: [],
-                comments: [],
-                savedBy: [],
-                visibility: 'followers',
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
-            const store = getDemoStore();
-            store.posts.unshift(mockPost);
-            return res.status(201).json(mockPost);
         }
         
         const post = await Post.create({
@@ -71,16 +37,9 @@ exports.createPost = async (req, res) => {
 
 exports.getFeed = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
         const skip = (page - 1) * limit;
-
-        // Handle demo mode
-        if (req.user._id === 'mock_id_123') {
-            const store = getDemoStore();
-            const pagedPosts = store.posts.slice(skip, skip + limit);
-            return res.json(pagedPosts);
-        }
 
         const userId = (req.user.id || req.user._id).toString();
         const currentUser = await User.findById(userId).populate('following');
@@ -233,9 +192,6 @@ exports.addComment = async (req, res) => {
 exports.savePost = async (req, res) => {
     try {
         const userId = (req.user.id || req.user._id).toString();
-        if (userId === 'mock_id_123') {
-            return res.json({ saved: true, bookmarked: true });
-        }
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(404).json({ message: 'Post not found' });

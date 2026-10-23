@@ -211,14 +211,8 @@ io.on('connection', (socket) => {
     // Join partner chat room with authorization check
     socket.on('join_partner_chat', async (chatId) => {
         if (!chatId || !socket.authUserId) return;
+        if (!mongoose.Types.ObjectId.isValid(String(chatId))) return;
         try {
-            if (String(chatId).startsWith('demo_partner_')) {
-                const parts = String(chatId).replace(/^demo_partner_/, '').split('__');
-                if (parts.includes(socket.authUserId)) {
-                    socket.join(`partner_${chatId}`);
-                }
-                return;
-            }
             const PartnerChat = require('./models/PartnerChat');
             const pc = await PartnerChat.findById(chatId);
             if (pc) {

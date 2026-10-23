@@ -93,4 +93,10 @@ describe('Notifications API Suite', () => {
         assert.strictEqual(listRes.data.length, 2);
         assert.ok(listRes.data.every(n => n.read === true));
     });
+
+    it('should safely handle negative pagination parameters without crashing', async () => {
+        const res = await apiRequest('/api/notifications?page=-1&limit=-5', { token: tokenA });
+        assert.strictEqual(res.status, 200);
+        assert.ok(Array.isArray(res.data));
+    });
 });

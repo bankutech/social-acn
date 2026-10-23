@@ -103,6 +103,14 @@ describe('Posts & Interactions API Suite', () => {
             assert.ok(contents.includes('Post 1 by User A'));
             assert.ok(contents.includes('Post 2 by User B'));
         });
+
+        it('should safely handle out-of-bounds and negative pagination values without crashing', async () => {
+            const feedRes = await apiRequest('/api/posts/feed?page=-5&limit=-10', {
+                token: tokenA
+            });
+            assert.strictEqual(feedRes.status, 200);
+            assert.ok(Array.isArray(feedRes.data));
+        });
     });
 
     describe('Likes & Toggle', () => {

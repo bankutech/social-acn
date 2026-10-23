@@ -3,32 +3,9 @@ const User = require('../models/User');
 const { sendPushNotification } = require('../utils/push');
 const mongoose = require('mongoose');
 
-const getDemoChatStore = () => {
-    if (!global.__acn_demo_chat_store) {
-        global.__acn_demo_chat_store = {
-            users: [
-                { _id: 'demo_user_1', name: 'Aisha', avatarUrl: 'https://i.pravatar.cc/150?u=demo_user_1', email: 'aisha@demo.acn.plus' },
-                { _id: 'demo_user_2', name: 'Ben', avatarUrl: 'https://i.pravatar.cc/150?u=demo_user_2', email: 'ben@demo.acn.plus' },
-                { _id: 'demo_user_3', name: 'Chen', avatarUrl: 'https://i.pravatar.cc/150?u=demo_user_3', email: 'chen@demo.acn.plus' },
-            ],
-            chatsByKey: new Map(),
-        };
-    }
-    return global.__acn_demo_chat_store;
-};
-
-const demoKeyFor = (a, b) => [String(a), String(b)].sort().join('__');
-
 exports.getChats = async (req, res) => {
     try {
         const userId = req.user.id || req.user._id;
-        if (userId === 'mock_id_123') {
-            const store = getDemoChatStore();
-            const chats = Array.from(store.chatsByKey.values())
-                .filter(c => c.participants.some(p => String(p._id || p) === 'mock_id_123'))
-                .sort((a, b) => new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0));
-            return res.json(chats);
-        }
 
         const chats = await Chat.find({ 
             participants: { $in: [userId] }
@@ -46,24 +23,6 @@ exports.getChats = async (req, res) => {
 exports.getChat = async (req, res) => {
     try {
         const userId = req.user.id || req.user._id;
-        if (userId === 'mock_id_123') {
-            const store = getDemoChatStore();
-            const key = demoKeyFor(userId, req.params.userId);
-            if (!store.chatsByKey.has(key)) {
-                const partner = store.users.find(u => u._id === req.params.userId) || { _id: req.params.userId, name: 'Demo User', avatarUrl: 'https://i.pravatar.cc/150?u=' + req.params.userId };
-                store.chatsByKey.set(key, {
-                    _id: `demo_chat_${key}`,
-                    participants: [
-                        { _id: 'mock_id_123', name: 'Demo Student', avatarUrl: 'https://i.pravatar.cc/150?u=mock' },
-                        partner,
-                    ],
-                    messages: [],
-                    lastMessage: '',
-                    lastMessageTime: null,
-                });
-            }
-            return res.json(store.chatsByKey.get(key));
-        }
 
         if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
             return res.status(400).json({ message: 'Valid user ID is required' });
@@ -291,10 +250,6 @@ exports.markAsRead = async (req, res) => {
 exports.getUsersForChat = async (req, res) => {
     try {
         const userId = req.user.id || req.user._id;
-        if (userId === 'mock_id_123') {
-            const store = getDemoChatStore();
-            return res.json(store.users);
-        }
 
         const currentUser = await User.findById(userId).populate('following');
         const followingIds = currentUser.following.map(user => user._id);
@@ -312,7 +267,6 @@ exports.getUsersForChat = async (req, res) => {
 exports.deleteChat = async (req, res) => {
     try {
         const userId = req.user.id || req.user._id;
-        if (userId === 'mock_id_123') return res.json({ success: true });
 
         if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) {
             return res.status(404).json({ message: 'Chat not found' });

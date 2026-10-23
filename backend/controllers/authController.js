@@ -41,6 +41,7 @@ exports.registerUser = async (req, res) => {
             password,
             bio: bio || '',
             skills: skills || [],
+            studyStreak: 1,
             avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${encodeURIComponent(normalizedEmail)}`
         });
 
@@ -52,6 +53,7 @@ exports.registerUser = async (req, res) => {
                 avatarUrl: user.avatarUrl,
                 bio: user.bio,
                 skills: user.skills,
+                studyStreak: user.studyStreak || 1,
                 token: generateToken(user._id),
             });
         }
@@ -89,12 +91,12 @@ exports.loginUser = async (req, res) => {
         if (user && (await user.matchPassword(password))) {
             const now = new Date();
             const prevLogin = user.lastLogin;
-            if (prevLogin) {
-                const diffTime = Math.abs(now.getTime() - new Date(prevLogin).getTime());
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                if (diffDays === 1) {
+            if (prevLogin && user.studyStreak > 0) {
+                const toDayNumber = (d) => Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / (24 * 60 * 60 * 1000));
+                const dayDiff = toDayNumber(now) - toDayNumber(new Date(prevLogin));
+                if (dayDiff === 1) {
                     user.studyStreak = (user.studyStreak || 0) + 1;
-                } else if (diffDays > 1) {
+                } else if (dayDiff > 1) {
                     user.studyStreak = 1;
                 }
             } else {
@@ -160,12 +162,12 @@ exports.googleLogin = async (req, res) => {
             }
             const now = new Date();
             const prevLogin = user.lastLogin;
-            if (prevLogin) {
-                const diffTime = Math.abs(now.getTime() - new Date(prevLogin).getTime());
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                if (diffDays === 1) {
+            if (prevLogin && user.studyStreak > 0) {
+                const toDayNumber = (d) => Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / (24 * 60 * 60 * 1000));
+                const dayDiff = toDayNumber(now) - toDayNumber(new Date(prevLogin));
+                if (dayDiff === 1) {
                     user.studyStreak = (user.studyStreak || 0) + 1;
-                } else if (diffDays > 1) {
+                } else if (dayDiff > 1) {
                     user.studyStreak = 1;
                 }
             } else {
@@ -297,7 +299,7 @@ exports.toggleFollow = async (req, res) => {
             // Emit socket event
             const io = req.app.get('io');
             if (io) {
-                io.emit(`notification_${targetId}`, { type: 'follow', sender: userId });
+                io.to(`user_${targetId}`).emit(`notification_${targetId}`, { type: 'follow', sender: userId });
             }
         }
 

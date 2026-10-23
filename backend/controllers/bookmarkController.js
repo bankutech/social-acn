@@ -15,6 +15,7 @@ exports.toggleBookmark = async (req, res) => {
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
         const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
         const isBookmarked = user.bookmarks.some(id => id.toString() === postId.toString());
 
         if (isBookmarked) {

@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 
 exports.getNotifications = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
 
         const notifications = await Notification.find({ recipient: req.user.id })
             .sort({ createdAt: -1 })

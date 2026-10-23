@@ -6,17 +6,6 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 
-const getDemoPartnerStore = () => {
-    if (!global.__acn_demo_partner_store) {
-        global.__acn_demo_partner_store = {
-            chatsByKey: new Map(), // key: sorted ids
-            messagesByChatId: new Map(),
-        };
-    }
-    return global.__acn_demo_partner_store;
-};
-
-const partnerKeyFor = (a, b) => [String(a), String(b)].sort().join('__');
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(String(id));
 
 // Helper: check if user is participant
@@ -30,33 +19,23 @@ const isParticipant = (chat, userId) => {
 exports.getOrCreatePartnerChat = async (req, res) => {
     try {
         const { partnerId } = req.params;
-        const userId = req.user._id || req.user.id;
+        const userId = (req.user._id || req.user.id).toString();
 
-        if (userId === partnerId) {
+        if (!isValidObjectId(partnerId)) {
+            return res.status(400).json({ message: 'Valid partner ID is required' });
+        }
+
+        if (userId === partnerId.toString()) {
             return res.status(400).json({ message: 'Cannot create partner chat with yourself' });
         }
 
-        // DEMO mode (or any non-ObjectId ids): use in-memory chat to avoid ObjectId casting crashes
-        if (!isValidObjectId(userId) || !isValidObjectId(partnerId)) {
-            const store = getDemoPartnerStore();
-            const key = partnerKeyFor(userId, partnerId);
-            if (!store.chatsByKey.has(key)) {
-                const chatId = `demo_partner_${key}`;
-                const chat = {
-                    _id: chatId,
-                    user_one_id: { _id: String(userId), name: req.user.name || 'Demo Student', avatarUrl: req.user.avatarUrl || 'https://i.pravatar.cc/150?u=mock', email: req.user.email || 'demo@acn.plus' },
-                    user_two_id: { _id: String(partnerId), name: 'Demo User', avatarUrl: `https://i.pravatar.cc/150?u=${partnerId}`, email: `${partnerId}@demo.acn.plus` },
-                    theme: { theme_name: 'purple_dark', wallpaper_url: '', updated_by: null, updated_at: new Date() },
-                    expires_enabled: true,
-                };
-                store.chatsByKey.set(key, chat);
-                store.messagesByChatId.set(chatId, []);
-            }
-            return res.json(store.chatsByKey.get(key));
+        const partner = await User.findById(partnerId);
+        if (!partner) {
+            return res.status(404).json({ message: 'User not found' });
         }
 
         // Sort IDs to ensure consistent lookup
-        const [id1, id2] = [userId, partnerId].sort();
+        const [id1, id2] = [userId, partnerId.toString()].sort();
 
         let chat = await PartnerChat.findOne({
             user_one_id: id1,
@@ -84,17 +63,15 @@ exports.getOrCreatePartnerChat = async (req, res) => {
 exports.getPartnerMessages = async (req, res) => {
     try {
         const { chatId } = req.params;
-        const userId = req.user._id || req.user.id;
+        const userId = (req.user._id || req.user.id).toString();
 
-        if (String(chatId).startsWith('demo_partner_') || !isValidObjectId(userId)) {
-            const store = getDemoPartnerStore();
-            const msgs = store.messagesByChatId.get(chatId) || [];
-            return res.json(msgs);
+        if (!isValidObjectId(chatId)) {
+            return res.status(404).json({ message: 'Chat not found' });
         }
 
         const chat = await PartnerChat.findById(chatId);
         if (!chat) return res.status(404).json({ message: 'Chat not found' });
-        if (!isParticipant(chat, userId.toString())) {
+        if (!isParticipant(chat, userId)) {
             return res.status(403).json({ message: 'Access denied' });
         }
 
@@ -118,34 +95,21 @@ exports.getPartnerMessages = async (req, res) => {
 // SEND partner message
 exports.sendPartnerMessage = async (req, res) => {
     try {
-    const { chatId } = req.params;
-    const { content, message_type, image_url, cloudinary_public_id, replyToId } = req.body;
-    const userId = req.user._id || req.user.id;
+        const { chatId } = req.params;
+        const { content, message_type, image_url, cloudinary_public_id, replyToId } = req.body;
+        const userId = (req.user._id || req.user.id).toString();
 
-        if (String(chatId).startsWith('demo_partner_') || !isValidObjectId(userId)) {
-            const store = getDemoPartnerStore();
-            const now = new Date();
-            const msg = {
-                _id: `demo_partner_msg_${Date.now()}`,
-                chat_id: chatId,
-                sender_id: { _id: String(userId), name: req.user.name || 'Demo Student', avatarUrl: req.user.avatarUrl || 'https://i.pravatar.cc/150?u=mock' },
-                message_type: message_type || 'text',
-                content: content || '',
-                image_url: image_url || '',
-                created_at: now,
-                expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000),
-            };
-            const arr = store.messagesByChatId.get(chatId) || [];
-            arr.push(msg);
-            store.messagesByChatId.set(chatId, arr);
-            const io = req.app.get('io');
-            if (io) io.to(`partner_${chatId}`).emit('partner_new_message', msg);
-            return res.status(201).json(msg);
+        if (!isValidObjectId(chatId)) {
+            return res.status(404).json({ message: 'Chat not found' });
+        }
+
+        if (!String(content || '').trim() && !String(image_url || '').trim()) {
+            return res.status(400).json({ message: 'Message must have text or media.' });
         }
 
         const chat = await PartnerChat.findById(chatId);
         if (!chat) return res.status(404).json({ message: 'Chat not found' });
-        if (!isParticipant(chat, userId.toString())) {
+        if (!isParticipant(chat, userId)) {
             return res.status(403).json({ message: 'Access denied' });
         }
 
@@ -174,9 +138,6 @@ exports.sendPartnerMessage = async (req, res) => {
         // Emit via Socket.io
         const io = req.app.get('io');
         if (io) {
-            const receiverId = chat.user_one_id.toString() === userId.toString() 
-                ? chat.user_two_id.toString() 
-                : chat.user_one_id.toString();
             io.to(`partner_${chatId}`).emit('partner_new_message', populated);
         }
 
@@ -201,23 +162,10 @@ exports.sendPartnerMessage = async (req, res) => {
 exports.uploadPartnerImage = async (req, res) => {
     try {
         const { chatId } = req.params;
-        const userId = req.user._id || req.user.id;
+        const userId = (req.user._id || req.user.id).toString();
 
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
-        }
-
-        if (String(chatId).startsWith('demo_partner_') || !isValidObjectId(userId)) {
-            const fileUrl = (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://')))
-                ? req.file.path
-                : `/uploads/${req.file.filename}`;
-
-            return res.json({ 
-                image_url: fileUrl,
-                url: fileUrl,
-                cloudinary_public_id: req.file.filename,
-                filename: req.file.filename
-            });
         }
 
         if (!isValidObjectId(chatId)) {
@@ -226,7 +174,7 @@ exports.uploadPartnerImage = async (req, res) => {
 
         const chat = await PartnerChat.findById(chatId);
         if (!chat) return res.status(404).json({ message: 'Chat not found' });
-        if (!isParticipant(chat, userId.toString())) {
+        if (!isParticipant(chat, userId)) {
             return res.status(403).json({ message: 'Access denied' });
         }
 
@@ -250,27 +198,15 @@ exports.updateTheme = async (req, res) => {
     try {
         const { chatId } = req.params;
         const { theme_name, wallpaper_url } = req.body;
-        const userId = req.user._id || req.user.id;
+        const userId = (req.user._id || req.user.id).toString();
 
-        if (String(chatId).startsWith('demo_partner_') || !isValidObjectId(userId)) {
-            const store = getDemoPartnerStore();
-            const chat = store.chatsByKey.get(String(chatId).replace(/^demo_partner_/, '').split('__').sort().join('__')) ||
-                (store.chatsByKey ? Array.from(store.chatsByKey.values()).find(c => c._id === chatId) : null);
-            if (!chat) return res.status(404).json({ message: 'Chat not found' });
-            chat.theme = {
-                theme_name: theme_name || chat.theme.theme_name,
-                wallpaper_url: wallpaper_url || chat.theme.wallpaper_url,
-                updated_by: String(userId),
-                updated_at: new Date()
-            };
-            const io = req.app.get('io');
-            if (io) io.to(`partner_${chatId}`).emit('partner_theme_change', chat.theme);
-            return res.json(chat);
+        if (!isValidObjectId(chatId)) {
+            return res.status(404).json({ message: 'Chat not found' });
         }
 
         const chat = await PartnerChat.findById(chatId);
         if (!chat) return res.status(404).json({ message: 'Chat not found' });
-        if (!isParticipant(chat, userId.toString())) {
+        if (!isParticipant(chat, userId)) {
             return res.status(403).json({ message: 'Access denied' });
         }
 
@@ -298,15 +234,6 @@ exports.updateTheme = async (req, res) => {
 exports.getMyPartnerChats = async (req, res) => {
     try {
         const userId = req.user._id || req.user.id;
-        
-        if (userId === 'mock_id_123' || !isValidObjectId(userId)) {
-            const store = getDemoPartnerStore();
-            const chats = Array.from(store.chatsByKey.values()).filter(c =>
-                String(c.user_one_id?._id || c.user_one_id) === String(userId) ||
-                String(c.user_two_id?._id || c.user_two_id) === String(userId)
-            );
-            return res.json(chats.map(c => ({ ...c, lastMessage: (store.messagesByChatId.get(c._id) || []).slice(-1)[0] || null })));
-        }
 
         const chats = await PartnerChat.find({
             $or: [{ user_one_id: userId }, { user_two_id: userId }]
@@ -331,11 +258,7 @@ exports.getMyPartnerChats = async (req, res) => {
 
 exports.deletePartnerChat = async (req, res) => {
     try {
-        const userId = req.user._id || req.user.id;
-        
-        if (userId === 'mock_id_123' || !isValidObjectId(userId)) {
-            return res.json({ success: true });
-        }
+        const userId = (req.user._id || req.user.id).toString();
 
         if (!isValidObjectId(req.params.chatId)) {
             return res.status(404).json({ message: 'Chat not found' });

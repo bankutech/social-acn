@@ -12,26 +12,6 @@ exports.createStory = async (req, res) => {
             return res.status(400).json({ message: 'Story must have content or image.' });
         }
         
-        // Handle demo mode
-        if (req.user._id === 'mock_id_123') {
-            // Return mock story for demo user
-            const mockStory = {
-                _id: 'mock_story_' + Date.now(),
-                author: {
-                    _id: 'mock_id_123',
-                    name: 'Demo Student',
-                    avatarUrl: 'https://i.pravatar.cc/150?u=mock'
-                },
-                content: content || '',
-                type: type || (imageUrl ? 'image' : 'text'),
-                imageUrl,
-                viewers: [],
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
-            return res.status(201).json(mockStory);
-        }
-        
         const story = await Story.create({
             author: req.user._id || req.user.id,
             content: content || '',
@@ -50,14 +30,8 @@ exports.createStory = async (req, res) => {
 
 exports.getStories = async (req, res) => {
     try {
-        // Handle demo mode
-        if (req.user._id === 'mock_id_123') {
-            // Return empty stories for demo user
-            return res.json([]);
-        }
-
         const currentUser = await User.findById(req.user.id).populate('following');
-        const followingIds = currentUser.following.map(user => user._id);
+        const followingIds = currentUser?.following?.map(user => user._id) || [];
         followingIds.push(req.user.id);
 
         const stories = await Story.find({ 
@@ -99,8 +73,6 @@ exports.viewStory = async (req, res) => {
 
 exports.getUserStories = async (req, res) => {
     try {
-        if (req.params.userId === 'mock_id_123') return res.json([]);
-
         if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
             return res.status(404).json({ message: 'User not found' });
         }

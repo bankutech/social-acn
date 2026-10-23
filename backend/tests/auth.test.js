@@ -210,4 +210,58 @@ describe('Auth API Suite', () => {
             assert.ok(Array.isArray(res.data));
         });
     });
+
+    describe('Study Streak Progression & Edge Cases', () => {
+        it('should initialize studyStreak to 1 on initial login and maintain streak on same-day logins', async () => {
+            const User = require('../models/User');
+            // Register
+            const regRes = await apiRequest('/api/auth/register', {
+                method: 'POST',
+                body: { name: 'Streak Tester', email: 'streak@test.com', password: 'password123' }
+            });
+            assert.strictEqual(regRes.status, 201);
+            
+            // Login 1
+            const login1 = await apiRequest('/api/auth/login', {
+                method: 'POST',
+                body: { email: 'streak@test.com', password: 'password123' }
+            });
+            assert.strictEqual(login1.status, 200);
+            assert.strictEqual(login1.data.studyStreak, 1);
+
+            // Login 2 on the same day (should keep streak at 1)
+            const login2 = await apiRequest('/api/auth/login', {
+                method: 'POST',
+                body: { email: 'streak@test.com', password: 'password123' }
+            });
+            assert.strictEqual(login2.status, 200);
+            assert.strictEqual(login2.data.studyStreak, 1);
+
+            // Simulate login on next calendar day (yesterday was last login)
+            const userDoc = await User.findOne({ email: 'streak@test.com' });
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            userDoc.lastLogin = yesterday;
+            await userDoc.save();
+
+            const loginNextDay = await apiRequest('/api/auth/login', {
+                method: 'POST',
+                body: { email: 'streak@test.com', password: 'password123' }
+            });
+            assert.strictEqual(loginNextDay.status, 200);
+            assert.strictEqual(loginNextDay.data.studyStreak, 2);
+
+            // Simulate login after missing a day (3 days ago)
+            const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+            userDoc.lastLogin = threeDaysAgo;
+            await userDoc.save();
+
+            const loginMissed = await apiRequest('/api/auth/login', {
+                method: 'POST',
+                body: { email: 'streak@test.com', password: 'password123' }
+            });
+            assert.strictEqual(loginMissed.status, 200);
+            assert.strictEqual(loginMissed.data.studyStreak, 1);
+        });
+    });
 });
+
