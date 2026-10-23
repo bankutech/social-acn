@@ -171,7 +171,7 @@ export default function StoryViewer({ story, onClose, currentUserId }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '80px 0 100px'
         }}>
-          {story.type === 'image' && story.imageUrl ? (
+          {story.imageUrl ? (
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '0 16px' }}>
               <img
                 src={api.getFileUrl(story.imageUrl)}

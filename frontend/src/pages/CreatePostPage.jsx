@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
+import { compressImage } from '../lib/imageCompressor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Image, Code, Type, X, Video, LayoutGrid as Grid, Sparkles } from 'lucide-react';
 
@@ -18,6 +19,7 @@ export default function CreatePostPage() {
   const [reelTitle, setReelTitle] = useState('');
   const [reelVideoFile, setReelVideoFile] = useState(null);
   const [reelVideoPreview, setReelVideoPreview] = useState('');
+  const [reelVideoUrl, setReelVideoUrl] = useState('');
   const [reelHashtags, setReelHashtags] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,16 +28,25 @@ export default function CreatePostPage() {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setError('');
     if (createMode === 'post' || createMode === 'story') {
       if (imagePreview) URL.revokeObjectURL(imagePreview);
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setPostType('image');
     } else if (createMode === 'reel') {
-      if (!file.type.startsWith('video/')) { alert('Please select a valid video file.'); return; }
+      if (!file.type.startsWith('video/')) { 
+        setError('Please select a valid video file (.mp4, .webm, .mov).'); 
+        return; 
+      }
+      if (file.size > 4.2 * 1024 * 1024) {
+        setError(`Video is ${(file.size / (1024 * 1024)).toFixed(1)} MB. Serverless direct video upload is capped at 4.2 MB. Please choose a shorter clip or paste a video URL below.`);
+        return;
+      }
       if (reelVideoPreview) URL.revokeObjectURL(reelVideoPreview);
       setReelVideoFile(file);
       setReelVideoPreview(URL.createObjectURL(file));
+      setReelVideoUrl('');
     }
   };
 
@@ -44,6 +55,8 @@ export default function CreatePostPage() {
     if (reelVideoPreview) URL.revokeObjectURL(reelVideoPreview);
     setImageFile(null); setImagePreview('');
     setReelVideoFile(null); setReelVideoPreview('');
+    setReelVideoUrl('');
+    setError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -54,43 +67,81 @@ export default function CreatePostPage() {
     };
   }, [imagePreview, reelVideoPreview]);
 
-
   const handleSubmit = async () => {
-    setLoading(true); setError('');
+    setLoading(true); 
+    setError('');
     try {
       if (createMode === 'post') {
         if (!content.trim() && !imageFile && !codeSnippet.trim()) return setLoading(false);
         let imageUrl = '', cloudinaryPublicId = '';
         if (imageFile) {
-          const fd = new FormData(); fd.append('file', imageFile);
+          const compressed = await compressImage(imageFile, { maxWidth: 1280, maxHeight: 1280, quality: 0.85 });
+          const fd = new FormData(); 
+          fd.append('file', compressed);
           const r = await api.upload('/api/upload/image/posts', fd);
-          imageUrl = r.url; cloudinaryPublicId = r.filename;
+          imageUrl = r.url; 
+          cloudinaryPublicId = r.filename;
         }
-        await api.post('/api/posts', { content, type: postType, imageUrl, cloudinaryPublicId, codeSnippet: postType === 'code' ? codeSnippet : undefined, codeLanguage: postType === 'code' ? codeLanguage : undefined });
+        await api.post('/api/posts', { 
+          content, 
+          type: imageUrl ? 'image' : postType, 
+          imageUrl, 
+          cloudinaryPublicId, 
+          codeSnippet: postType === 'code' ? codeSnippet : undefined, 
+          codeLanguage: postType === 'code' ? codeLanguage : undefined 
+        });
         navigate('/');
       } else if (createMode === 'story') {
         if (!content.trim() && !imageFile) return setLoading(false);
         let imageUrl = '', cloudinaryPublicId = '';
         if (imageFile) {
-          const fd = new FormData(); fd.append('file', imageFile);
+          const compressed = await compressImage(imageFile, { maxWidth: 1080, maxHeight: 1920, quality: 0.85 });
+          const fd = new FormData(); 
+          fd.append('file', compressed);
           const r = await api.upload('/api/upload/image/posts', fd);
-          imageUrl = r.url; cloudinaryPublicId = r.filename;
+          imageUrl = r.url; 
+          cloudinaryPublicId = r.filename;
         }
         await api.post('/api/stories', {
           content,
-          type: imageFile ? 'image' : 'text',
+          type: imageUrl ? 'image' : 'text',
           imageUrl,
           cloudinaryPublicId
         });
         navigate('/');
       } else if (createMode === 'reel') {
-        if (!reelTitle.trim() || !reelVideoFile) return setLoading(false);
-        const fd = new FormData(); fd.append('file', reelVideoFile);
-        const r = await api.upload('/api/upload/video/reels', fd);
-        await api.post('/api/reels', { title: reelTitle, videoUrl: r.url, cloudinaryPublicId: r.filename, hashtags: reelHashtags });
+        let finalVideoUrl = reelVideoUrl.trim();
+        let cloudinaryPublicId = '';
+        if (reelVideoFile) {
+          if (reelVideoFile.size > 4.2 * 1024 * 1024) {
+            setError(`Video is ${(reelVideoFile.size / (1024 * 1024)).toFixed(1)} MB. Serverless video uploads must be under 4.2 MB. Please choose a shorter clip or paste a video URL.`);
+            setLoading(false);
+            return;
+          }
+          const fd = new FormData(); 
+          fd.append('file', reelVideoFile);
+          const r = await api.upload('/api/upload/video/reels', fd);
+          finalVideoUrl = r.url;
+          cloudinaryPublicId = r.filename;
+        }
+        if (!reelTitle.trim() || !finalVideoUrl) {
+          setError('Please provide a caption and a video file or video URL.');
+          setLoading(false);
+          return;
+        }
+        await api.post('/api/reels', { 
+          title: reelTitle.trim(), 
+          videoUrl: finalVideoUrl, 
+          cloudinaryPublicId, 
+          hashtags: reelHashtags,
+          visibility: 'public'
+        });
         navigate('/reels');
       }
-    } catch (err) { setError(err.message || 'Something went wrong. Please try again.'); }
+    } catch (err) { 
+      console.error('Submit error:', err);
+      setError(err?.message || 'Something went wrong. Please check your media and try again.'); 
+    }
     setLoading(false);
   };
 
@@ -98,7 +149,7 @@ export default function CreatePostPage() {
     if (loading) return true;
     if (createMode === 'post') return !content.trim() && !imageFile && !codeSnippet.trim();
     if (createMode === 'story') return !content.trim() && !imageFile;
-    if (createMode === 'reel') return !reelTitle.trim() || !reelVideoFile;
+    if (createMode === 'reel') return !reelTitle.trim() || (!reelVideoFile && !reelVideoUrl.trim());
     return true;
   };
 
@@ -312,12 +363,27 @@ export default function CreatePostPage() {
                   <label className="reel-upload">
                     <input type="file" accept="video/*" onChange={handleFileSelect} ref={fileInputRef} hidden />
                     <div className="upload-icon reel-icon"><Video size={26} strokeWidth={1.5} /></div>
-                    <strong>Upload a video</strong>
-                    <span>MP4 or MOV · up to 60 s</span>
+                    <strong>Upload a video clip</strong>
+                    <span>MP4 or MOV (under 4.2 MB)</span>
                   </label>
                 )}
 
                 <div className="meta-fields">
+                  <div className="field">
+                    <label htmlFor="reel-url">Or paste video URL</label>
+                    <input 
+                      id="reel-url" 
+                      type="url" 
+                      placeholder="https://.../video.mp4" 
+                      value={reelVideoUrl} 
+                      onChange={e => {
+                        setReelVideoUrl(e.target.value);
+                        if (e.target.value.trim() && reelVideoFile) {
+                          removeFile();
+                        }
+                      }} 
+                    />
+                  </div>
                   <div className="field">
                     <label htmlFor="reel-caption">Caption</label>
                     <input id="reel-caption" type="text" placeholder="Describe your reel…" value={reelTitle} onChange={e => setReelTitle(e.target.value)} />

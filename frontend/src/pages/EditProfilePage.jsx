@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
+import { compressImage } from '../lib/imageCompressor';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Check, X, Camera, Sparkles, User, FileText, Zap } from 'lucide-react';
 
@@ -117,8 +118,9 @@ export default function EditProfilePage() {
       let avatarPublicId;
 
       if (avatarFile) {
+        const compressed = await compressImage(avatarFile, { maxWidth: 600, maxHeight: 600, quality: 0.85 });
         const fd = new FormData();
-        fd.append('file', avatarFile);
+        fd.append('file', compressed);
         const res = await api.upload('/api/auth/avatar', fd);
         avatarUrl = res.url;
         avatarPublicId = res.filename;

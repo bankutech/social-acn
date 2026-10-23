@@ -19,6 +19,7 @@ exports.createReel = async (req, res) => {
             cloudinaryPublicId: req.body.cloudinaryPublicId, // Passed from frontend
             thumbnailUrl,
             thumbnailPublicId: req.body.thumbnailPublicId, // Passed from frontend
+            visibility: req.body.visibility || 'public',
             hashtags: Array.isArray(hashtags)
                 ? hashtags
                 : (hashtags ? hashtags.split(',').map(tag => tag.trim()).filter(Boolean) : [])
@@ -34,13 +35,17 @@ exports.createReel = async (req, res) => {
 
 exports.getReels = async (req, res) => {
     try {
-        const currentUser = await User.findById(req.user.id).populate('following');
-        const followingIds = currentUser?.following?.map(user => user._id) || [];
-        followingIds.push(req.user.id);
+        const userId = req.user.id || req.user._id;
+        const currentUser = await User.findById(userId).populate('following');
+        const followingIds = (currentUser?.following || []).map(u => (u._id || u).toString());
+        followingIds.push(userId.toString());
 
         const reels = await Reel.find({ 
-            author: { $in: followingIds },
-            visibility: { $in: ['public', 'followers'] }
+            $or: [
+                { visibility: 'public' },
+                { author: { $in: followingIds } },
+                { visibility: { $exists: false } }
+            ]
         })
         .populate('author', 'name avatarUrl')
         .populate('likes', 'name avatarUrl')

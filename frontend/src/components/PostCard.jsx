@@ -176,7 +176,7 @@ export default function PostCard({ post, onUpdate }) {
       </div>
 
       {/* ── Media Content ── */}
-      {post.type === 'image' && post.imageUrl && (
+      {post.imageUrl && (
         <div className="ig-media-wrapper" onDoubleClick={handleDoubleTap}>
           <img
             src={api.getFileUrl(post.imageUrl)}
