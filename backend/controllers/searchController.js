@@ -6,7 +6,8 @@ exports.search = async (req, res) => {
         const { q, type } = req.query;
         if (!q || q.trim().length < 2) return res.json({ users: [], posts: [] });
 
-        const regex = { $regex: q.trim(), $options: 'i' };
+        const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = { $regex: escaped, $options: 'i' };
 
         let users = [], posts = [];
 
@@ -17,7 +18,7 @@ exports.search = async (req, res) => {
         }
 
         if (type === 'posts' || !type || type === 'all') {
-            posts = await Post.find({ content: regex })
+            posts = await Post.find({ content: regex, visibility: { $in: ['public', 'followers'] } })
                 .populate('author', 'name avatarUrl')
                 .sort({ createdAt: -1 })
                 .limit(20);

@@ -16,18 +16,32 @@ exports.registerUser = async (req, res) => {
     try {
         const { name, email, password, bio, skills, avatarUrl } = req.body;
 
-        const userExists = await User.findOne({ email });
+        if (!name || !name.trim() || !email || !password) {
+            return res.status(400).json({ message: 'Name, email, and password are required' });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(normalizedEmail)) {
+            return res.status(400).json({ message: 'Please provide a valid email address' });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' });
+        }
+
+        const userExists = await User.findOne({ email: normalizedEmail });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
         const user = await User.create({
-            name,
-            email,
+            name: name.trim(),
+            email: normalizedEmail,
             password,
             bio: bio || '',
             skills: skills || [],
-            avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${email}`
+            avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${encodeURIComponent(normalizedEmail)}`
         });
 
         if (user) {
@@ -49,10 +63,14 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
+        const normalizedEmail = email.toLowerCase().trim();
 
         let user;
         try {
-            user = await User.findOne({ email }).select('+password');
+            user = await User.findOne({ email: normalizedEmail }).select('+password');
             if (!user && email === 'demo@acn.plus' && password === 'demo123') {
                 user = await User.create({
                     name: 'Demo Student',
@@ -242,6 +260,10 @@ exports.toggleFollow = async (req, res) => {
         const userId = req.user.id || req.user._id;
         const targetId = req.params.userId;
 
+        if (!mongoose.Types.ObjectId.isValid(targetId)) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
         if (userId.toString() === targetId) {
             return res.status(400).json({ message: 'Cannot follow yourself' });
         }
@@ -308,12 +330,13 @@ exports.exploreUsers = async (req, res) => {
 exports.searchUsers = async (req, res) => {
     try {
         const { q } = req.query;
-        if (!q) return res.json([]);
+        if (!q || !q.trim()) return res.json([]);
 
+        const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const users = await User.find({
             $or: [
-                { name: { $regex: q, $options: 'i' } },
-                { email: { $regex: q, $options: 'i' } }
+                { name: { $regex: escaped, $options: 'i' } },
+                { email: { $regex: escaped, $options: 'i' } }
             ]
         }).select('name avatarUrl bio skills').limit(10);
 

@@ -66,6 +66,12 @@ export default function ChatPage() {
     };
   }, [userId, user?._id]);
 
+  useEffect(() => {
+    return () => {
+      if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    };
+  }, [mediaPreview]);
+
   const loadChat = async () => {
     try {
       setError('');
@@ -139,6 +145,7 @@ export default function ChatPage() {
         
         setMessages(prev => [...prev, msg]);
         getSocket().emit('private_message', { receiverId: userId, message: msg, chatId: chat?._id });
+        if (mediaPreview) URL.revokeObjectURL(mediaPreview);
         setMediaFile(null);
         setMediaPreview('');
         setMediaType('');
@@ -172,6 +179,7 @@ export default function ChatPage() {
 
   const onPickMedia = (file) => {
     if (!file) return;
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
     const isVideo = file.type?.startsWith('video/');
     setMediaType(isVideo ? 'video' : 'image');
     setMediaFile(file);
@@ -297,7 +305,7 @@ export default function ChatPage() {
           <div className="media-preview-v2">
             <div className="media-preview-box-v2">
               {mediaType === 'video' ? <video src={mediaPreview} /> : <img src={mediaPreview} />}
-              <button className="remove-media-v2" onClick={() => { setMediaFile(null); setMediaPreview(''); }}>
+              <button className="remove-media-v2" onClick={() => { if (mediaPreview) URL.revokeObjectURL(mediaPreview); setMediaFile(null); setMediaPreview(''); }}>
                 <X size={14} />
               </button>
             </div>

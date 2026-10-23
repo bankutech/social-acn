@@ -201,20 +201,42 @@ exports.uploadPartnerImage = async (req, res) => {
         const { chatId } = req.params;
         const userId = req.user._id || req.user.id;
 
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        if (String(chatId).startsWith('demo_partner_') || !isValidObjectId(userId)) {
+            const fileUrl = (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://')))
+                ? req.file.path
+                : `/uploads/${req.file.filename}`;
+
+            return res.json({ 
+                image_url: fileUrl,
+                url: fileUrl,
+                cloudinary_public_id: req.file.filename,
+                filename: req.file.filename
+            });
+        }
+
+        if (!isValidObjectId(chatId)) {
+            return res.status(400).json({ message: 'Valid chat ID is required' });
+        }
+
         const chat = await PartnerChat.findById(chatId);
         if (!chat) return res.status(404).json({ message: 'Chat not found' });
         if (!isParticipant(chat, userId.toString())) {
             return res.status(403).json({ message: 'Access denied' });
         }
 
-        if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded' });
-        }
+        const fileUrl = (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://')))
+            ? req.file.path
+            : `/uploads/${req.file.filename}`;
 
-        // multer-storage-cloudinary provides the full URL in path and the public_id in filename
         res.json({ 
-            image_url: req.file.path,
-            cloudinary_public_id: req.file.filename 
+            image_url: fileUrl,
+            url: fileUrl,
+            cloudinary_public_id: req.file.filename,
+            filename: req.file.filename
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -313,6 +335,10 @@ exports.deletePartnerChat = async (req, res) => {
             return res.json({ success: true });
         }
 
+        if (!isValidObjectId(req.params.chatId)) {
+            return res.status(404).json({ message: 'Chat not found' });
+        }
+
         const chat = await PartnerChat.findOne({
             _id: req.params.chatId,
             $or: [{ user_one_id: userId }, { user_two_id: userId }]
@@ -337,6 +363,10 @@ exports.editPartnerMessage = async (req, res) => {
         const { content } = req.body;
         const userId = req.user._id || req.user.id;
 
+        if (!isValidObjectId(messageId)) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
         const message = await PartnerMessage.findById(messageId);
         if (!message) return res.status(404).json({ message: 'Message not found' });
         if (message.sender_id.toString() !== userId.toString()) {
@@ -354,6 +384,11 @@ exports.editPartnerMessage = async (req, res) => {
                 populate: { path: 'sender_id', select: 'name' }
             });
 
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`partner_${message.chat_id}`).emit('partner_message_edited', populated);
+        }
+
         res.json(populated);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -365,6 +400,10 @@ exports.deletePartnerMessage = async (req, res) => {
         const { messageId } = req.params;
         const userId = req.user._id || req.user.id;
 
+        if (!isValidObjectId(messageId)) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
         const message = await PartnerMessage.findById(messageId);
         if (!message) return res.status(404).json({ message: 'Message not found' });
         if (message.sender_id.toString() !== userId.toString()) {
@@ -375,6 +414,11 @@ exports.deletePartnerMessage = async (req, res) => {
         message.content = 'This message was deleted';
         message.image_url = '';
         await message.save();
+
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`partner_${message.chat_id}`).emit('partner_message_deleted', { messageId });
+        }
 
         res.json({ success: true, messageId });
     } catch (error) {

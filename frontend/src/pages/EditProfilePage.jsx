@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
@@ -20,6 +20,12 @@ export default function EditProfilePage() {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
+
   const addSkill = () => {
     const s = skillInput.trim();
     if (s && !form.skills.includes(s) && form.skills.length < 12) {
@@ -31,6 +37,7 @@ export default function EditProfilePage() {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
     }

@@ -55,6 +55,12 @@ export default function PartnerChatPage() {
   }, [partnerId]);
 
   useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  useEffect(() => {
     if (!chat?._id) return;
     const socket = getSocket();
     socket.emit('join_partner_chat', chat._id);
@@ -173,6 +179,7 @@ export default function PartnerChatPage() {
         });
 
         setMessages(prev => [...prev, msg]);
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
         setImageFile(null);
         setImagePreview('');
         setShowImageModal(false);
@@ -230,12 +237,14 @@ export default function PartnerChatPage() {
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
     setShowImageModal(true);
   };
 
   const clearImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(null);
     setImagePreview('');
     setShowImageModal(false);

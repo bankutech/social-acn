@@ -28,7 +28,7 @@ router.post('/avatar', protect, setUploadType('avatars'), upload.single('file'),
     const url = req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))
         ? req.file.path
         : `/uploads/${req.file.filename}`;
-    res.json({ url });
+    res.json({ url, filename: req.file.filename });
 });
 
 module.exports = router;

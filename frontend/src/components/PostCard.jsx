@@ -73,6 +73,15 @@ export default function PostCard({ post, onUpdate }) {
     }
   };
 
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await api.delete(`/api/posts/${post._id}/comment/${commentId}`);
+      setComments(prev => prev.filter(c => c._id !== commentId));
+    } catch (e) {
+      console.error('Failed to delete comment:', e);
+    }
+  };
+
   const handleDelete = async () => {
     setShowMenu(false);
     if (!window.confirm('Delete this post?')) return;
@@ -313,12 +322,27 @@ export default function PostCard({ post, onUpdate }) {
             transition={{ duration: 0.2 }}
             className="ig-comments-thread"
           >
-            {comments.map((c, i) => (
-              <div key={c._id || i} className="ig-comment-item">
-                <span className="ig-comment-author">{c.author?.name || 'User'}</span>
-                <span className="ig-comment-text">{c.content}</span>
-              </div>
-            ))}
+            {comments.map((c, i) => {
+              const canDelete = user && (String(user._id || user.id) === String(c.author?._id || c.author) || isOwner);
+              return (
+                <div key={c._id || i} className="ig-comment-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <span className="ig-comment-author">{c.author?.name || 'User'}</span>
+                    <span className="ig-comment-text">{c.content}</span>
+                  </div>
+                  {canDelete && c._id && (
+                    <button
+                      onClick={() => handleDeleteComment(c._id)}
+                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '2px 4px' }}
+                      title="Delete comment"
+                      aria-label="Delete comment"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>

@@ -26,6 +26,13 @@ export function AuthProvider({ children }) {
       } catch { localStorage.removeItem('acn_user'); }
     }
     setLoading(false);
+
+    const handleUnauthorized = () => {
+      disconnectSocket();
+      setUser(null);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, []);
 
   const login = async (email, password) => {

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const StorySchema = new mongoose.Schema({
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    content: { type: String, required: true },
+    content: { type: String, default: '' },
     type: { type: String, enum: ['text', 'image'], default: 'text' },
     imageUrl: { type: String },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

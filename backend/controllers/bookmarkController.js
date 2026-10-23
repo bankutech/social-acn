@@ -14,12 +14,17 @@ exports.toggleBookmark = async (req, res) => {
 
         if (isBookmarked) {
             user.bookmarks = user.bookmarks.filter(id => id.toString() !== postId.toString());
+            post.savedBy = post.savedBy.filter(id => id.toString() !== userId.toString());
         } else {
             user.bookmarks.unshift(postId);
+            if (!post.savedBy.some(id => id.toString() === userId.toString())) {
+                post.savedBy.push(userId);
+            }
         }
 
         await user.save();
-        res.json({ bookmarked: !isBookmarked });
+        await post.save();
+        res.json({ bookmarked: !isBookmarked, saved: !isBookmarked });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
@@ -37,7 +42,8 @@ exports.getBookmarks = async (req, res) => {
                 { path: 'comments.author', select: 'name avatarUrl' }
             ]
         });
-        res.json(user.bookmarks || []);
+        const validBookmarks = (user?.bookmarks || []).filter(b => b && b._id);
+        res.json(validBookmarks);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });

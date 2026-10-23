@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { getToken } from './api';
 
 const API_BASE = (import.meta.env.VITE_API_URL !== undefined && import.meta.env.VITE_API_URL !== null)
   ? import.meta.env.VITE_API_URL
@@ -10,7 +11,10 @@ export const getSocket = () => {
   if (!socket) {
     socket = io(API_BASE, {
       autoConnect: false,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      auth: (cb) => {
+        cb({ token: getToken() });
+      }
     });
   }
   return socket;
@@ -18,6 +22,7 @@ export const getSocket = () => {
 
 export const connectSocket = (userId) => {
   const s = getSocket();
+  s.auth = { token: getToken() };
   const join = () => {
     if (userId) s.emit('join', userId);
   };

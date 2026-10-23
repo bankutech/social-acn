@@ -62,12 +62,22 @@ if (hasCloudinary) {
     }
 }
 
+const ALLOWED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const ALLOWED_VIDEO_EXTS = ['.mp4', '.webm', '.mov', '.avi'];
+
 const fileFilter = (req, file, cb) => {
-    const mime = file.mimetype || '';
-    if (mime.startsWith('image/') || mime.startsWith('video/')) {
+    const mime = (file.mimetype || '').toLowerCase();
+    const ext = path.extname(file.originalname || '').toLowerCase();
+
+    const isImage = mime.startsWith('image/') && ALLOWED_IMAGE_EXTS.includes(ext);
+    const isVideo = mime.startsWith('video/') && ALLOWED_VIDEO_EXTS.includes(ext);
+
+    if (isImage || isVideo) {
         cb(null, true);
     } else {
-        cb(new Error('Only image and video files are allowed'), false);
+        const err = new Error('Only valid image and video files are allowed (.jpg, .jpeg, .png, .gif, .webp, .mp4, .webm, .mov)');
+        err.status = 400;
+        cb(err, false);
     }
 };
 
@@ -83,11 +93,23 @@ const getUploadInstance = () => {
     return rawUpload;
 };
 
+const handleMulterError = (fn) => (req, res, next) => {
+    fn(req, res, (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ message: 'File size exceeds limit (50 MB max)' });
+            }
+            return res.status(err.status || 400).json({ message: err.message || 'File upload failed' });
+        }
+        next();
+    });
+};
+
 const upload = {
-    single: (name) => (req, res, next) => getUploadInstance().single(name)(req, res, next),
-    array: (name, max) => (req, res, next) => getUploadInstance().array(name, max)(req, res, next),
-    fields: (fields) => (req, res, next) => getUploadInstance().fields(fields)(req, res, next),
-    any: () => (req, res, next) => getUploadInstance().any()(req, res, next)
+    single: (name) => handleMulterError((req, res, next) => getUploadInstance().single(name)(req, res, next)),
+    array: (name, max) => handleMulterError((req, res, next) => getUploadInstance().array(name, max)(req, res, next)),
+    fields: (fields) => handleMulterError((req, res, next) => getUploadInstance().fields(fields)(req, res, next)),
+    any: () => handleMulterError((req, res, next) => getUploadInstance().any()(req, res, next))
 };
 
 const setUploadType = (type) => (req, res, next) => {

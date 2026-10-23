@@ -1,6 +1,7 @@
 const Chat = require('../models/Chat');
 const User = require('../models/User');
 const { sendPushNotification } = require('../utils/push');
+const mongoose = require('mongoose');
 
 const getDemoChatStore = () => {
     if (!global.__acn_demo_chat_store) {
@@ -64,6 +65,13 @@ exports.getChat = async (req, res) => {
             return res.json(store.chatsByKey.get(key));
         }
 
+        if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+            return res.status(400).json({ message: 'Valid user ID is required' });
+        }
+        if (req.params.userId.toString() === userId.toString()) {
+            return res.status(400).json({ message: 'Cannot chat with yourself' });
+        }
+
         const chat = await Chat.findOne({
             participants: { $all: [userId, req.params.userId] }
         })
@@ -71,9 +79,14 @@ exports.getChat = async (req, res) => {
         .populate('messages.sender', 'name avatarUrl');
 
         if (!chat) {
+            const recipient = await User.findById(req.params.userId);
+            if (!recipient) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
             // Create new chat if it doesn't exist
             const newChat = await Chat.create({
-                participants: [req.user.id, req.params.userId]
+                participants: [userId, req.params.userId]
             });
             
             const populatedChat = await Chat.findById(newChat._id)
@@ -94,13 +107,21 @@ exports.sendMessage = async (req, res) => {
         const { content, receiverId, message_type, mediaUrl, replyToId } = req.body;
         const userId = req.user.id || req.user._id;
 
+        if (!receiverId || !mongoose.Types.ObjectId.isValid(receiverId)) {
+            return res.status(400).json({ message: 'Valid receiver ID is required' });
+        }
+
+        if (receiverId.toString() === userId.toString()) {
+            return res.status(400).json({ message: 'Cannot chat with yourself' });
+        }
+
         let chat = await Chat.findOne({
             participants: { $all: [userId, receiverId] }
         });
 
         if (!chat) {
             chat = await Chat.create({
-                participants: [req.user.id, receiverId]
+                participants: [userId, receiverId]
             });
         }
 
@@ -128,14 +149,24 @@ exports.sendMessage = async (req, res) => {
         
         const newMessage = savedChat.messages[savedChat.messages.length - 1];
 
+        // Emit real-time message to recipient's room
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`user_${receiverId}`).emit('new_message', {
+                type: 'new_message',
+                message: newMessage,
+                chatId: chat._id
+            });
+        }
+
         // Send Push Notification
-        const sender = await User.findById(req.user.id);
-        const recipientStrId = chat.participants.find(p => p.toString() !== req.user.id);
+        const sender = await User.findById(userId);
+        const recipientStrId = chat.participants.find(p => p.toString() !== userId.toString());
         if (recipientStrId) {
             sendPushNotification(recipientStrId, {
-                title: sender.name,
+                title: sender ? sender.name : 'New Message',
                 body: content || (normalizedType === 'image' ? 'Sent an image' : 'Sent a file'),
-                url: `/chat/${req.user.id}`
+                url: `/chat/${userId}`
             });
         }
 
@@ -150,6 +181,10 @@ exports.editMessage = async (req, res) => {
         const { chatId, messageId } = req.params;
         const { content } = req.body;
         const userId = req.user.id || req.user._id;
+
+        if (!mongoose.Types.ObjectId.isValid(chatId) || !mongoose.Types.ObjectId.isValid(messageId)) {
+            return res.status(404).json({ message: 'Chat or message not found' });
+        }
 
         const chat = await Chat.findOne({ _id: chatId, participants: userId });
         if (!chat) return res.status(404).json({ message: 'Chat not found' });
@@ -172,6 +207,14 @@ exports.editMessage = async (req, res) => {
             })
             .then(c => c.messages.id(messageId));
 
+        const io = req.app.get('io');
+        if (io) {
+            const other = chat.participants.find(p => p.toString() !== userId.toString());
+            if (other) {
+                io.to(`user_${other}`).emit('message_edited', { message: updatedMessage, chatId: chat._id });
+            }
+        }
+
         res.json(updatedMessage);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -182,6 +225,10 @@ exports.deleteMessage = async (req, res) => {
     try {
         const { chatId, messageId } = req.params;
         const userId = req.user.id || req.user._id;
+
+        if (!mongoose.Types.ObjectId.isValid(chatId) || !mongoose.Types.ObjectId.isValid(messageId)) {
+            return res.status(404).json({ message: 'Chat or message not found' });
+        }
 
         const chat = await Chat.findOne({ _id: chatId, participants: userId });
         if (!chat) return res.status(404).json({ message: 'Chat not found' });
@@ -197,6 +244,14 @@ exports.deleteMessage = async (req, res) => {
         message.mediaUrl = '';
         await chat.save();
 
+        const io = req.app.get('io');
+        if (io) {
+            const other = chat.participants.find(p => p.toString() !== userId.toString());
+            if (other) {
+                io.to(`user_${other}`).emit('message_deleted', { messageId, chatId: chat._id });
+            }
+        }
+
         res.json({ success: true, messageId });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -205,15 +260,23 @@ exports.deleteMessage = async (req, res) => {
 
 exports.markAsRead = async (req, res) => {
     try {
+        const userId = req.user.id || req.user._id;
+        if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) {
+            return res.status(404).json({ message: 'Chat not found' });
+        }
         const chat = await Chat.findById(req.params.chatId);
         
         if (!chat) {
             return res.status(404).json({ message: 'Chat not found' });
         }
 
+        if (!chat.participants.some(p => p.toString() === userId.toString())) {
+            return res.status(403).json({ message: 'Not authorized to mark messages as read in this chat' });
+        }
+
         // Mark all messages from other user as read
         chat.messages.forEach(message => {
-            if (!message.sender.equals(req.user.id)) {
+            if (!message.sender.equals(userId)) {
                 message.read = true;
             }
         });
@@ -250,6 +313,10 @@ exports.deleteChat = async (req, res) => {
     try {
         const userId = req.user.id || req.user._id;
         if (userId === 'mock_id_123') return res.json({ success: true });
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) {
+            return res.status(404).json({ message: 'Chat not found' });
+        }
 
         const chat = await Chat.findOne({
             _id: req.params.chatId,

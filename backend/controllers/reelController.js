@@ -2,11 +2,16 @@ const Reel = require('../models/Reel');
 const User = require('../models/User');
 const { cloudinary } = require('../config/upload');
 const path = require('path');
+const mongoose = require('mongoose');
 
 exports.createReel = async (req, res) => {
     try {
         const { title, videoUrl, thumbnailUrl, hashtags } = req.body;
         
+        if (!title || typeof title !== 'string' || !title.trim() || !videoUrl || typeof videoUrl !== 'string' || !videoUrl.trim()) {
+            return res.status(400).json({ message: 'Title and videoUrl are required' });
+        }
+
         // Handle demo mode
         if (req.user._id === 'mock_id_123') {
             // Return mock reel for demo user
@@ -17,11 +22,11 @@ exports.createReel = async (req, res) => {
                     name: 'Demo Student',
                     avatarUrl: 'https://i.pravatar.cc/150?u=mock'
                 },
-                title,
+                title: title.trim(),
                 videoUrl,
                 thumbnailUrl,
                 category: 'Learn in 60 seconds',
-                hashtags: hashtags ? hashtags.split(',').map(tag => tag.trim()) : [],
+                hashtags: hashtags ? (Array.isArray(hashtags) ? hashtags : hashtags.split(',').map(tag => tag.trim())) : [],
                 likes: [],
                 comments: [],
                 duration: 60,
@@ -34,7 +39,7 @@ exports.createReel = async (req, res) => {
         
         const reel = await Reel.create({
             author: req.user._id || req.user.id,
-            title,
+            title: title.trim(),
             videoUrl,
             cloudinaryPublicId: req.body.cloudinaryPublicId, // Passed from frontend
             thumbnailUrl,
@@ -61,7 +66,7 @@ exports.getReels = async (req, res) => {
         }
 
         const currentUser = await User.findById(req.user.id).populate('following');
-        const followingIds = currentUser.following.map(user => user._id);
+        const followingIds = currentUser?.following?.map(user => user._id) || [];
         followingIds.push(req.user.id);
 
         const reels = await Reel.find({ 
@@ -81,18 +86,22 @@ exports.getReels = async (req, res) => {
 
 exports.likeReel = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Reel not found' });
+        }
         const reel = await Reel.findById(req.params.id);
         
         if (!reel) {
             return res.status(404).json({ message: 'Reel not found' });
         }
 
-        const isLiked = reel.likes.includes(req.user.id);
+        const userId = (req.user.id || req.user._id).toString();
+        const isLiked = reel.likes.some(id => (id._id || id).toString() === userId);
         
         if (isLiked) {
-            reel.likes.pull(req.user.id);
+            reel.likes = reel.likes.filter(id => (id._id || id).toString() !== userId);
         } else {
-            reel.likes.push(req.user.id);
+            reel.likes.push(userId);
         }
 
         await reel.save();
@@ -105,6 +114,13 @@ exports.likeReel = async (req, res) => {
 exports.addComment = async (req, res) => {
     try {
         const { content } = req.body;
+        if (!content || typeof content !== 'string' || !content.trim()) {
+            return res.status(400).json({ message: 'Comment content cannot be empty' });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Reel not found' });
+        }
         const reel = await Reel.findById(req.params.id);
 
         if (!reel) {
@@ -112,8 +128,8 @@ exports.addComment = async (req, res) => {
         }
 
         const comment = {
-            author: req.user.id,
-            content,
+            author: req.user.id || req.user._id,
+            content: content.trim(),
             createdAt: new Date()
         };
 
@@ -132,14 +148,17 @@ exports.addComment = async (req, res) => {
 
 exports.deleteReel = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Reel not found' });
+        }
         const reel = await Reel.findById(req.params.id);
 
         if (!reel) {
             return res.status(404).json({ message: 'Reel not found' });
         }
 
-        const userId = req.user.id || req.user._id;
-        if (reel.author.toString() !== userId.toString()) {
+        const userId = (req.user.id || req.user._id).toString();
+        if (reel.author.toString() !== userId) {
             return res.status(403).json({ message: 'Not authorized to delete this reel' });
         }
 
@@ -172,6 +191,10 @@ exports.getUserReels = async (req, res) => {
     try {
         const userId = req.params.userId;
         if (userId === 'mock_id_123') return res.json([]);
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
         const reels = await Reel.find({ author: userId })
             .populate('author', 'name avatarUrl')

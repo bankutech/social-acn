@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+const mongoose = require('mongoose');
 
 exports.getNotifications = async (req, res) => {
     try {
@@ -22,6 +23,9 @@ exports.getNotifications = async (req, res) => {
 
 exports.markAsRead = async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Notification not found' });
+        }
         const notification = await Notification.findOneAndUpdate(
             { _id: req.params.id, recipient: req.user.id },
             { read: true },

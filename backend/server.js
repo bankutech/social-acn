@@ -5,6 +5,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
+const jwt = require('jsonwebtoken');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const { cleanupExpiredPartnerMessages } = require('./jobs/partnerCleanup');
@@ -50,6 +51,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const authRoutes = require('./routes/authRoutes');
 const postRoutes = require('./routes/postRoutes');
 const reelRoutes = require('./routes/reelRoutes');
+const storyRoutes = require('./routes/storyRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const partnerChatRoutes = require('./routes/partnerChatRoutes');
 const aiRoutes = require('./routes/aiRoutes');
@@ -64,6 +66,7 @@ app.use(checkDbConnection);
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/reels', reelRoutes);
+app.use('/api/stories', storyRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/partner-chat', partnerChatRoutes);
 app.use('/api/ai', aiRoutes);
@@ -107,24 +110,22 @@ const connectDB = async () => {
                 dbConnected = true;
                 return;
             } catch (err) {
-                console.error('❌ CRITICAL: Remote MongoDB Connection Failed.');
-                console.error('ERROR MESSAGE:', err.message);
-                if (err.message.includes('IP address') || err.message.includes('buffering timed out')) {
-                    console.error('👉 ACTION REQUIRED: Whitelist your IP in MongoDB Atlas (Network Access -> 0.0.0.0/0).');
-                } else if (err.message.includes('Authentication failed')) {
-                    console.error('👉 ACTION REQUIRED: Authentication failed. Please check your password in .env.');
+                console.error('❌ Remote MongoDB Connection Failed:', err.message);
+                if (process.env.VERCEL) {
+                    dbConnected = false;
+                    return;
                 }
-                dbConnected = false;
-                return;
+                console.warn('⚠️ Falling back to local or in-memory MongoDB...');
             }
         }
 
         // 2. Try local MongoDB first if running
         try {
-            const localUri = uri || 'mongodb://127.0.0.1:27017/acn_plus';
+            const localUri = (!uri || uri.includes('mongodb+srv') || uri.includes('@')) ? 'mongodb://127.0.0.1:27017/acn_plus' : uri;
             await mongoose.connect(localUri, { serverSelectionTimeoutMS: 2000 });
             console.log('✅ Connected to local MongoDB successfully');
             dbConnected = true;
+            return;
         } catch (localErr) {
             // 3. Fallback to in-memory MongoDB server for local development
             if (process.env.VERCEL) {
@@ -164,24 +165,74 @@ app.get('/', (req, res) => {
 });
 
 // ==================== Socket.io ====================
+// Map<userIdString, Set<socketId>>
 const connectedUsers = new Map();
+
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_123');
+            socket.authUserId = String(decoded.id);
+        } catch {
+            // Invalid or expired token - allow connection, but unauthenticated operations will be restricted
+        }
+    }
+    next();
+});
 
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
     // Handle user joining with their ID
     socket.on('join', (userId) => {
-        connectedUsers.set(userId, socket.id);
-        socket.userId = userId;
+        if (!userId) return;
+        const uid = String(userId);
+
+        // Security check: Must have valid authentication token matching requested room
+        if (!socket.authUserId || socket.authUserId !== uid) {
+            console.warn(`Unauthorized join attempt: socket auth is ${socket.authUserId}, tried to join ${uid}`);
+            return;
+        }
+
+        socket.userId = uid;
+        socket.join(`user_${uid}`);
+
+        if (!connectedUsers.has(uid)) {
+            connectedUsers.set(uid, new Set());
+        }
+        connectedUsers.get(uid).add(socket.id);
+
         // Broadcast online status
-        io.emit('user_status', { userId, online: true });
-        console.log(`User ${userId} joined with socket ${socket.id}`);
+        io.emit('user_status', { userId: uid, online: true });
+        console.log(`User ${uid} joined room user_${uid} with socket ${socket.id}`);
     });
 
-    // Join partner chat room
-    socket.on('join_partner_chat', (chatId) => {
-        socket.join(`partner_${chatId}`);
-        console.log(`User ${socket.userId} joined partner chat ${chatId}`);
+    // Join partner chat room with authorization check
+    socket.on('join_partner_chat', async (chatId) => {
+        if (!chatId || !socket.authUserId) return;
+        try {
+            if (String(chatId).startsWith('demo_partner_')) {
+                const parts = String(chatId).replace(/^demo_partner_/, '').split('__');
+                if (parts.includes(socket.authUserId)) {
+                    socket.join(`partner_${chatId}`);
+                }
+                return;
+            }
+            const PartnerChat = require('./models/PartnerChat');
+            const pc = await PartnerChat.findById(chatId);
+            if (pc) {
+                const isPart = pc.user_one_id.toString() === socket.authUserId || pc.user_two_id.toString() === socket.authUserId;
+                if (isPart) {
+                    socket.join(`partner_${chatId}`);
+                    console.log(`User ${socket.authUserId} authorized and joined partner chat ${chatId}`);
+                } else {
+                    console.warn(`Unauthorized partner chat join: ${socket.authUserId} tried to join ${chatId}`);
+                }
+            }
+        } catch (e) {
+            console.error('Error in join_partner_chat:', e.message);
+        }
     });
 
     // Leave partner chat room
@@ -192,60 +243,60 @@ io.on('connection', (socket) => {
     // Handle private messages (regular chat)
     socket.on('private_message', async (data) => {
         const { receiverId, message, chatId } = data;
-        const receiverSocketId = connectedUsers.get(receiverId);
-
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit('new_message', {
-                type: 'new_message',
-                message: message, // Pass the full message object with _id
-                chatId
-            });
+        if (!receiverId || !socket.authUserId) return;
+        const senderId = String(message?.sender?._id || message?.sender || '');
+        if (senderId && senderId !== socket.authUserId) {
+            console.warn(`Blocked spoofed message from socket ${socket.authUserId} pretending to be ${senderId}`);
+            return;
         }
+
+        io.to(`user_${receiverId}`).emit('new_message', {
+            type: 'new_message',
+            message: message, // Pass the full message object with _id
+            chatId
+        });
     });
 
     socket.on('edit_message', (data) => {
         const { receiverId, message, chatId } = data;
-        const receiverSocketId = connectedUsers.get(receiverId);
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit('message_edited', { message, chatId });
-        }
+        if (!receiverId || !socket.authUserId) return;
+        io.to(`user_${receiverId}`).emit('message_edited', { message, chatId });
     });
 
     socket.on('delete_message', (data) => {
         const { receiverId, messageId, chatId } = data;
-        const receiverSocketId = connectedUsers.get(receiverId);
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit('message_deleted', { messageId, chatId });
-        }
+        if (!receiverId || !socket.authUserId) return;
+        io.to(`user_${receiverId}`).emit('message_deleted', { messageId, chatId });
     });
 
     // Partner Chat Events
     socket.on('partner_message', (data) => {
         const { chatId, message } = data;
+        if (!chatId || !socket.authUserId) return;
         socket.to(`partner_${chatId}`).emit('partner_new_message', message);
     });
 
     socket.on('partner_message_edited', (data) => {
         const { chatId, message } = data;
+        if (!chatId || !socket.authUserId) return;
         socket.to(`partner_${chatId}`).emit('partner_message_edited', message);
     });
 
     socket.on('partner_message_deleted', (data) => {
         const { chatId, messageId } = data;
+        if (!chatId || !socket.authUserId) return;
         socket.to(`partner_${chatId}`).emit('partner_message_deleted', { messageId });
     });
 
     // Handle typing indicators
     socket.on('typing', (data) => {
         const { receiverId, isTyping } = data;
-        const receiverSocketId = connectedUsers.get(receiverId);
+        if (!receiverId) return;
 
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit('user_typing', {
-                userId: socket.userId,
-                isTyping
-            });
-        }
+        io.to(`user_${receiverId}`).emit('user_typing', {
+            userId: socket.userId,
+            isTyping
+        });
     });
 
     // Partner typing
@@ -266,8 +317,14 @@ io.on('connection', (socket) => {
     // Handle user disconnection
     socket.on('disconnect', () => {
         if (socket.userId) {
-            connectedUsers.delete(socket.userId);
-            io.emit('user_status', { userId: socket.userId, online: false });
+            const userSockets = connectedUsers.get(socket.userId);
+            if (userSockets) {
+                userSockets.delete(socket.id);
+                if (userSockets.size === 0) {
+                    connectedUsers.delete(socket.userId);
+                    io.emit('user_status', { userId: socket.userId, online: false });
+                }
+            }
             console.log(`User ${socket.userId} disconnected`);
         }
     });
@@ -302,3 +359,6 @@ if (require.main === module && !process.env.VERCEL) {
 }
 
 module.exports = app;
+module.exports.server = server;
+module.exports.io = io;
+module.exports.connectDB = connectDB;

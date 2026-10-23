@@ -13,6 +13,7 @@ router.get('/', protect, getChats);
 router.get('/users', protect, getUsersForChat);
 router.get('/:userId', protect, getChat);
 router.post('/send', protect, sendMessage);
+router.post('/', protect, sendMessage);
 router.put('/:chatId/read', protect, markAsRead);
 router.put('/:chatId/message/:messageId', protect, editMessage);
 router.delete('/:chatId/message/:messageId', protect, deleteMessage);

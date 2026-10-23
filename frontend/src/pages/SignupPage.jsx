@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, UserPlus, X, Briefcase, BookOpen, Sparkles } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { BRAND } from '../config/brand';
+import api from '../lib/api';
 
 export default function SignupPage() {
   const { signup, googleLogin } = useAuth();
@@ -15,6 +16,12 @@ export default function SignupPage() {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
@@ -47,6 +54,7 @@ export default function SignupPage() {
   const handleAvatar = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
     }
@@ -57,12 +65,19 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      let avatarUrl = '';
+      await signup({ ...form, avatarUrl: `https://i.pravatar.cc/150?u=${encodeURIComponent(form.email)}` });
       if (avatarFile) {
-        // Just mock placeholder logic for demo
-        avatarUrl = `https://i.pravatar.cc/150?u=${form.email}`;
+        try {
+          const fd = new FormData();
+          fd.append('file', avatarFile);
+          const up = await api.upload('/api/auth/avatar', fd);
+          if (up?.url) {
+            await api.put('/api/auth/profile', { avatarUrl: up.url, avatarPublicId: up.filename });
+          }
+        } catch (uploadErr) {
+          console.warn('Avatar upload deferred:', uploadErr);
+        }
       }
-      await signup({ ...form, avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${form.email}` });
     } catch (err) {
       setError(err.message || 'Signup failed');
     }

@@ -61,9 +61,13 @@ export default function FeedPage() {
       const postsData = await api.get(`/api/posts/feed?page=${pageToLoad}&limit=10`);
       
       if (append) {
-        setPosts(prev => [...prev, ...postsData]);
+        setPosts(prev => {
+          const ids = new Set(prev.map(p => p._id));
+          const newPosts = (postsData || []).filter(p => !ids.has(p._id));
+          return [...prev, ...newPosts];
+        });
       } else {
-        setPosts(postsData);
+        setPosts(postsData || []);
       }
 
       if (postsData.length < 10) {

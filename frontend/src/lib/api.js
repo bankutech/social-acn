@@ -18,11 +18,33 @@ const headers = (isJson = true) => {
   return h;
 };
 
+const parseResponse = async (res, defaultMsg = 'Request failed') => {
+  if (!res.ok) {
+    let errMsg = defaultMsg;
+    try {
+      const data = await res.json();
+      errMsg = data.message || errMsg;
+    } catch {
+      try {
+        const text = await res.text();
+        if (text && text.length < 200) errMsg = text;
+      } catch {}
+    }
+    if (res.status === 401 && typeof window !== 'undefined' && !res.url.includes('/api/auth/login') && !res.url.includes('/api/auth/register')) {
+      if (localStorage.getItem('acn_user')) {
+        localStorage.removeItem('acn_user');
+        window.dispatchEvent(new Event('auth:unauthorized'));
+      }
+    }
+    throw new Error(errMsg);
+  }
+  return res.json();
+};
+
 const api = {
   get: async (path) => {
     const res = await fetch(`${API_BASE}${path}`, { headers: headers() });
-    if (!res.ok) throw new Error((await res.json()).message || 'Request failed');
-    return res.json();
+    return parseResponse(res, 'Request failed');
   },
 
   post: async (path, body) => {
@@ -31,8 +53,7 @@ const api = {
       headers: headers(),
       body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error((await res.json()).message || 'Request failed');
-    return res.json();
+    return parseResponse(res, 'Request failed');
   },
 
   put: async (path, body) => {
@@ -41,8 +62,7 @@ const api = {
       headers: headers(),
       body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error((await res.json()).message || 'Request failed');
-    return res.json();
+    return parseResponse(res, 'Request failed');
   },
 
   upload: async (path, formData) => {
@@ -51,8 +71,7 @@ const api = {
       headers: { 'Authorization': `Bearer ${getToken()}` },
       body: formData
     });
-    if (!res.ok) throw new Error((await res.json()).message || 'Upload failed');
-    return res.json();
+    return parseResponse(res, 'Upload failed');
   },
 
   patch: async (path, body) => {
@@ -61,8 +80,7 @@ const api = {
       headers: headers(),
       body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error((await res.json()).message || 'Request failed');
-    return res.json();
+    return parseResponse(res, 'Request failed');
   },
 
   delete: async (path) => {
@@ -70,8 +88,7 @@ const api = {
       method: 'DELETE',
       headers: headers()
     });
-    if (!res.ok) throw new Error((await res.json()).message || 'Request failed');
-    return res.json();
+    return parseResponse(res, 'Request failed');
   },
 
   getFileUrl: (path) => {

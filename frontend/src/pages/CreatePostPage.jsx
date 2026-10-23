@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
@@ -27,21 +27,32 @@ export default function CreatePostPage() {
     const file = e.target.files[0];
     if (!file) return;
     if (createMode === 'post' || createMode === 'story') {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setPostType('image');
     } else if (createMode === 'reel') {
       if (!file.type.startsWith('video/')) { alert('Please select a valid video file.'); return; }
+      if (reelVideoPreview) URL.revokeObjectURL(reelVideoPreview);
       setReelVideoFile(file);
       setReelVideoPreview(URL.createObjectURL(file));
     }
   };
 
   const removeFile = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    if (reelVideoPreview) URL.revokeObjectURL(reelVideoPreview);
     setImageFile(null); setImagePreview('');
     setReelVideoFile(null); setReelVideoPreview('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      if (reelVideoPreview) URL.revokeObjectURL(reelVideoPreview);
+    };
+  }, [imagePreview, reelVideoPreview]);
 
 
   const handleSubmit = async () => {
