@@ -1,13 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Send, Brain } from 'lucide-react';
 import api from '../lib/api';
 
 export default function AIFloatingAssistant() {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Close when navigating
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
+
+  // Hide on create, chat, reels, and AI pages where floating bubbles obstruct UI
+  const hideRoutes = ['/create', '/create-post', '/ai', '/reels', '/login', '/signup'];
+  if (
+    hideRoutes.includes(location.pathname) || 
+    location.pathname.startsWith('/chat') || 
+    location.pathname.startsWith('/partner-chat')
+  ) {
+    return null;
+  }
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -28,37 +45,25 @@ export default function AIFloatingAssistant() {
 
   return (
     <>
-      {/* Floating Toggle Button */}
+      {/* Floating Toggle Button (Mobile Only) */}
       <motion.button
         className="ai-fab"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.92 }}
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-             position: 'fixed',
-             bottom: '180px',
-             right: '24px',
-             width: '56px',
-             height: '56px',
-             borderRadius: '50%',
-             background: 'linear-gradient(135deg, #22d3ee, #0891b2)',
-             color: 'white',
-             display: 'flex',
-             alignItems: 'center',
-             justifyContent: 'center',
-             boxShadow: '0 8px 24px rgba(34, 211, 238, 0.4)',
-             zIndex: 999
-        }}
+        aria-label="Toggle AI Study Assistant"
       >
-        {isOpen ? <X size={24} /> : <Sparkles size={24} />}
+        {isOpen ? <X size={22} /> : <Sparkles size={22} />}
       </motion.button>
 
+      {/* Compact Chat Window (Mobile Only) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: 16, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            exit={{ opacity: 0, y: 16, scale: 0.95 }}
+            transition={{ duration: 0.18 }}
             className="ai-compact-window"
           >
             <div className="ai-window-header">
@@ -66,7 +71,15 @@ export default function AIFloatingAssistant() {
                 <Brain size={18} />
                 <span>Study Companion</span>
               </div>
-              <Sparkles size={16} className="pulse-icon" />
+              <div className="header-actions">
+                <button 
+                  className="close-ai-btn" 
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Close assistant"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="ai-window-messages">
@@ -80,7 +93,7 @@ export default function AIFloatingAssistant() {
                   {m.content}
                 </div>
               ))}
-              {loading && <div className="mini-msg ai dots">...</div>}
+              {loading && <div className="mini-msg ai dots">Thinking...</div>}
             </div>
 
             <div className="ai-window-input">
@@ -90,7 +103,7 @@ export default function AIFloatingAssistant() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend()}
               />
-              <button onClick={handleSend} disabled={loading}>
+              <button onClick={handleSend} disabled={loading} aria-label="Send message">
                 <Send size={16} />
               </button>
             </div>
@@ -99,28 +112,61 @@ export default function AIFloatingAssistant() {
       </AnimatePresence>
 
       <style>{`
+        /* ----------------------------------------------------
+           DESKTOP: HIDE FLOATING ASSISTANT COMPLETELY
+           (Sidebar already contains the full 'AI Tutor' nav)
+           ---------------------------------------------------- */
+        @media (min-width: 768px) {
+          .ai-fab,
+          .ai-compact-window {
+            display: none !important;
+          }
+        }
+
+        /* ----------------------------------------------------
+           MOBILE: BOTTOM-RIGHT CORNER ABOVE BOTTOM BAR
+           ---------------------------------------------------- */
+        .ai-fab {
+          position: fixed;
+          bottom: 74px;
+          right: 16px;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #0095f6, #2563eb);
+          color: white;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 16px rgba(0, 149, 246, 0.4);
+          z-index: 999;
+          cursor: pointer;
+        }
+
         .ai-compact-window {
           position: fixed;
-          bottom: 250px;
-          right: 24px;
+          bottom: 136px;
+          right: 16px;
           width: 320px;
-          height: 400px;
+          max-width: calc(100vw - 32px);
+          height: 380px;
           background: rgba(15, 15, 18, 0.95);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 24px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 20px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
           z-index: 1001;
-          box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
         }
 
         .ai-window-header {
-          padding: 16px;
-          background: rgba(255, 255, 255, 0.03);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          padding: 12px 16px;
+          background: rgba(255, 255, 255, 0.04);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -131,17 +177,41 @@ export default function AIFloatingAssistant() {
           align-items: center;
           gap: 8px;
           font-weight: 700;
-          font-size: 14px;
-          color: #22d3ee;
+          font-size: 13.5px;
+          color: #38bdf8;
+        }
+
+        .close-ai-btn {
+          background: none;
+          border: none;
+          color: rgba(255, 255, 255, 0.6);
+          padding: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          transition: color 0.15s ease;
+        }
+        .close-ai-btn:hover {
+          color: #ffffff;
         }
 
         .ai-window-messages {
           flex: 1;
           overflow-y: auto;
-          padding: 16px;
+          padding: 14px 16px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
+        }
+
+        .ai-empty-state {
+          color: #a8a8a8;
+          font-size: 13px;
+          line-height: 1.5;
+          text-align: center;
+          padding: 24px 8px;
         }
 
         .mini-msg {
@@ -153,8 +223,8 @@ export default function AIFloatingAssistant() {
         }
         .mini-msg.user {
           align-self: flex-end;
-          background: #22d3ee;
-          color: black;
+          background: #0095f6;
+          color: white;
           border-bottom-right-radius: 2px;
         }
         .mini-msg.ai {
@@ -165,40 +235,33 @@ export default function AIFloatingAssistant() {
         }
 
         .ai-window-input {
-          padding: 12px;
+          padding: 10px 14px;
           background: rgba(255, 255, 255, 0.02);
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
           display: flex;
           gap: 8px;
         }
         .ai-window-input input {
           flex: 1;
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(255, 255, 255, 0.06);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
+          border-radius: 10px;
           padding: 8px 12px;
           color: white;
           font-size: 13px;
+          outline: none;
         }
         .ai-window-input button {
-          background: #22d3ee;
-          color: black;
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
+          background: #0095f6;
+          color: white;
+          border: none;
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-        }
-
-        .pulse-icon {
-          animation: pulse 2s infinite;
-          color: rgba(34, 211, 238, 0.5);
-        }
-
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: 0.5; }
-          50% { transform: scale(1.2); opacity: 1; }
-          100% { transform: scale(1); opacity: 0.5; }
+          cursor: pointer;
         }
       `}</style>
     </>
