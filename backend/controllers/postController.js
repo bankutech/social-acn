@@ -78,6 +78,27 @@ exports.getFeed = async (req, res) => {
     }
 };
 
+exports.getExplorePosts = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 24;
+        const skip = (page - 1) * limit;
+
+        const posts = await Post.find({ visibility: { $in: ['public', 'followers'] } })
+            .populate('author', 'name avatarUrl')
+            .populate('likes', 'name avatarUrl')
+            .populate('comments.author', 'name avatarUrl')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 exports.getUserPosts = async (req, res) => {
     try {
         const { userId } = req.params;

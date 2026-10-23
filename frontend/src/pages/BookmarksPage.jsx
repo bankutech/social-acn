@@ -29,29 +29,29 @@ export default function BookmarksPage() {
           padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: 12
         }}>
-          <Bookmark size={20} color="#a78bfa" fill="#a78bfa" />
-          <h1 style={{ color: 'white', margin: 0, fontSize: 20, fontWeight: 700 }}>Saved Posts</h1>
-          {!loading && <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>{posts.length} saved</span>}
+          <Bookmark size={20} color="#ffffff" fill="#ffffff" />
+          <h1 style={{ color: 'white', margin: 0, fontSize: 20, fontWeight: 700 }}>Saved</h1>
+          {!loading && <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>{posts.length} {posts.length === 1 ? 'post' : 'posts'}</span>}
         </div>
 
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-            <Loader size={24} color="#a78bfa" style={{ animation: 'spin 1s linear infinite' }} />
+            <div className="loader-spinner" />
           </div>
         ) : posts.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             style={{ textAlign: 'center', padding: '80px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{
-              width: 80, height: 80, borderRadius: 24,
-              background: 'rgba(167,139,250,0.08)',
+              width: 80, height: 80, borderRadius: '50%',
+              border: '2px solid rgba(255,255,255,0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: 20
             }}>
-              <Bookmark size={36} color="#a78bfa" />
+              <Bookmark size={34} color="rgba(255,255,255,0.7)" />
             </div>
-            <h3 style={{ color: 'white', margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>No saved posts yet</h3>
-            <p style={{ color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.6 }}>
-              Tap the bookmark icon on any post to save it here for later.
+            <h3 style={{ color: 'white', margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>Save posts for later</h3>
+            <p style={{ color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.6, maxWidth: 320 }}>
+              When you save photos and posts, they will appear here. Only you can see what you've saved.
             </p>
           </motion.div>
         ) : (

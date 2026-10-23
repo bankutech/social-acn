@@ -93,7 +93,7 @@ export default function SearchPage() {
       <div style={{ padding: '16px 0' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-            <Loader size={24} color="#a78bfa" style={{ animation: 'spin 1s linear infinite' }} />
+            <div className="loader-spinner" />
           </div>
         )}
 
@@ -109,7 +109,7 @@ export default function SearchPage() {
         {results.users.length > 0 && (tab === 'all' || tab === 'users') && (
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 10px' }}>
-              <Users size={15} color="#a78bfa" />
+              <Users size={15} color="#0095f6" />
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>People</span>
             </div>
             <AnimatePresence>
@@ -132,7 +132,7 @@ export default function SearchPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: 'white', fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{u.name}</div>
                     {u.bio && <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.bio}</div>}
-                    <div style={{ color: '#a78bfa', fontSize: 11, marginTop: 2 }}>{u.followers?.length || 0} followers</div>
+                    <div style={{ color: '#0095f6', fontSize: 11, marginTop: 2 }}>{u.followers?.length || 0} followers</div>
                   </div>
                 </motion.div>
               ))}
@@ -144,7 +144,7 @@ export default function SearchPage() {
         {results.posts.length > 0 && (tab === 'all' || tab === 'posts') && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 10px' }}>
-              <FileText size={15} color="#22d3ee" />
+              <FileText size={15} color="#0095f6" />
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>Posts</span>
             </div>
             <AnimatePresence>
