@@ -458,6 +458,17 @@ export default function PartnerChatPage() {
           border-left: 1px solid rgba(255,255,255,0.05);
           border-right: 1px solid rgba(255,255,255,0.05);
           backdrop-filter: blur(20px);
+          margin: 0 auto;
+        }
+
+        @media (min-width: 768px) {
+          .pc-page {
+            max-width: 935px;
+            height: calc(100vh - 40px);
+            margin: 20px auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+          }
         }
         .pc-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(0,0,0,0.3); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.05); }
         .pc-icon-btn { background: none; border: none; color: rgba(255,255,255,0.7); padding: 8px; cursor: pointer; }
@@ -492,12 +503,16 @@ export default function PartnerChatPage() {
         .pc-bubble-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 10px; opacity: 0.5; justify-content: flex-end; }
         .pc-timer { display: flex; align-items: center; gap: 4px; color: #fbbf24; }
         
-        .pc-footer { padding: 12px 16px 30px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); }
-        .pc-input-bar { display: flex; align-items: flex-end; gap: 10px; }
-        .pc-input-actions { display: flex; gap: 4px; padding-bottom: 6px; }
-        .pc-icon-btn-simple { background: none; border: none; color: rgba(255,255,255,0.5); padding: 8px; cursor: pointer; }
-        .pc-input-v2 { flex: 1; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 10px 16px; color: white; font-size: 14px; outline: none; resize: none; max-height: 120px; line-height: 1.4; }
-        .pc-send-btn { width: 42px; height: 42px; border-radius: 50%; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .pc-footer { padding: 12px 16px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); }
+        @media (max-width: 767px) {
+          .pc-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+        }
+        .pc-input-bar { display: flex; align-items: center; gap: 10px; width: 100%; }
+        .pc-input-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .pc-icon-btn-simple { background: none; border: none; color: rgba(255,255,255,0.5); padding: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .pc-input-v2 { flex: 1; min-width: 0; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 20px; padding: 10px 16px; color: white !important; font-size: 14px; outline: none !important; box-shadow: none !important; resize: none; max-height: 120px; line-height: 1.4; }
+        .pc-input-v2:focus { outline: none !important; box-shadow: none !important; border-color: rgba(255,255,255,0.25) !important; }
+        .pc-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0 !important; }
         
         .pc-context-preview { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 12px; margin-bottom: 12px; }
         .pc-context-content { flex: 1; min-width: 0; }

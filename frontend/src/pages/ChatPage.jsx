@@ -556,9 +556,15 @@ export default function ChatPage() {
         }
 
         .chat-footer-v2 {
-          padding: 12px 16px 30px;
+          padding: 12px 16px;
           background: #000;
           border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @media (max-width: 767px) {
+          .chat-footer-v2 {
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+          }
         }
 
         .input-context-v2 {
@@ -579,45 +585,59 @@ export default function ChatPage() {
 
         .input-row-v2 {
           display: flex;
-          align-items: flex-end;
+          align-items: center;
           gap: 10px;
+          width: 100%;
         }
 
         .input-actions-v2 {
           display: flex;
           gap: 4px;
-          padding-bottom: 6px;
+          flex-shrink: 0;
         }
         .action-btn-v2 {
           color: rgba(255,255,255,0.5);
           padding: 8px;
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .input-wrapper-v2 {
           flex: 1;
+          min-width: 0;
           background: #1a1a1a;
           border-radius: 20px;
           padding: 10px 16px;
-          border: 1px solid rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.08);
+          transition: border-color 0.2s;
+          display: flex;
+          align-items: center;
         }
 
-        .chat-textarea-v2 {
-          width: 100%;
-          background: transparent;
-          border: none;
-          color: white;
-          font-size: 14px;
-          outline: none;
+        .input-wrapper-v2:focus-within {
+          border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .chat-textarea-v2,
+        .chat-textarea-v2:focus {
+          width: 100% !important;
+          background: transparent !important;
+          border: none !important;
+          color: white !important;
+          font-size: 14px !important;
+          outline: none !important;
+          box-shadow: none !important;
           resize: none;
           max-height: 120px;
-          padding: 0;
+          padding: 0 !important;
           line-height: 1.4;
         }
 
         .send-btn-v2 {
-          width: 42px;
-          height: 42px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
           background: #6366f1;
           border: none;
@@ -626,10 +646,14 @@ export default function ChatPage() {
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: transform 0.2s;
+          flex-shrink: 0 !important;
+          transition: transform 0.15s ease, background 0.15s ease;
         }
-        .send-btn-v2:active { transform: scale(0.9); }
-        .send-btn-v2:disabled { opacity: 0.3; }
+        .send-btn-v2:hover:not(:disabled) {
+          background: #4f46e5;
+        }
+        .send-btn-v2:active { transform: scale(0.92); }
+        .send-btn-v2:disabled { opacity: 0.35; cursor: default; }
 
         .media-preview-v2 {
           margin-bottom: 12px;
