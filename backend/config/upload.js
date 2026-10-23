@@ -71,3 +71,6 @@ const setUploadType = (type) => (req, res, next) => {
 };
 
 module.exports = { upload, setUploadType, cloudinary, hasCloudinary };
+module.exports.default = module.exports;
+module.exports.upload = upload;
+module.exports.setUploadType = setUploadType;

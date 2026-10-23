@@ -5,7 +5,9 @@ const {
     updateProfile, toggleFollow, exploreUsers, searchUsers, getAllUsers, pushSubscribe, getVapidPublicKey
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
-const { upload, setUploadType } = require('../config/upload');
+const uploadConfig = require('../config/upload');
+const upload = uploadConfig.upload || (uploadConfig.default && uploadConfig.default.upload);
+const setUploadType = uploadConfig.setUploadType || (uploadConfig.default && uploadConfig.default.setUploadType) || ((type) => (req, res, next) => { req.uploadType = type; next(); });
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);

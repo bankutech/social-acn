@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const { upload, setUploadType } = require('../config/upload');
+const uploadConfig = require('../config/upload');
+const upload = uploadConfig.upload || (uploadConfig.default && uploadConfig.default.upload);
+const setUploadType = uploadConfig.setUploadType || (uploadConfig.default && uploadConfig.default.setUploadType) || ((type) => (req, res, next) => { req.uploadType = type; next(); });
 const {
     getOrCreatePartnerChat,
     getPartnerMessages,
