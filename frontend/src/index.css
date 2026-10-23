@@ -150,6 +150,16 @@ input::placeholder, textarea::placeholder {
   box-shadow: var(--shadow-sm);
 }
 
+@media (min-width: 768px) {
+  .page-container {
+    max-width: 935px;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+    padding-bottom: 32px;
+  }
+}
+
 .page-container-wide {
   width: 100%;
   margin: 0 auto;
@@ -163,10 +173,26 @@ input::placeholder, textarea::placeholder {
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-width: 0;
+  transition: margin-left 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .main-content.has-nav {
-  padding-bottom: 0;
+  padding-bottom: 54px;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .main-content.has-nav {
+    margin-left: 72px;
+    padding-bottom: 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .main-content.has-nav {
+    margin-left: 244px;
+    padding-bottom: 0;
+  }
 }
 
 .btn-primary {

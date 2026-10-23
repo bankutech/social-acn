@@ -12,7 +12,8 @@ exports.getNotifications = async (req, res) => {
             .limit(limit)
             .populate('sender', 'name avatarUrl')
             .populate('relatedPost', 'content imageUrl')
-            .populate('relatedUser', 'name avatarUrl');
+            .populate('relatedUser', 'name avatarUrl')
+            .lean();
 
         res.json(notifications);
     } catch (err) {

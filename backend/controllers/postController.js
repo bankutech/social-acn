@@ -57,7 +57,8 @@ exports.getFeed = async (req, res) => {
         .populate('comments.author', 'name avatarUrl')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .lean();
 
         // Fallback: if user follows no one or network has no posts, show discovery posts
         if (posts.length === 0 && (page === 1 || followingIds.length <= 1)) {
@@ -67,7 +68,8 @@ exports.getFeed = async (req, res) => {
                 .populate('comments.author', 'name avatarUrl')
                 .sort({ createdAt: -1 })
                 .skip(skip)
-                .limit(limit);
+                .limit(limit)
+                .lean();
         }
 
         res.json(posts);
@@ -86,7 +88,8 @@ exports.getUserPosts = async (req, res) => {
             .populate('author', 'name avatarUrl')
             .populate('likes', 'name avatarUrl')
             .populate('comments.author', 'name avatarUrl')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
         res.json(posts);
     } catch (error) {
         res.status(500).json({ message: error.message });

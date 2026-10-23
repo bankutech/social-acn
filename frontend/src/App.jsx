@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import BottomNav from './components/BottomNav';
+import DesktopSidebar from './components/DesktopSidebar';
 import AIFloatingAssistant from './components/AIFloatingAssistant';
 import FeedPage from './pages/FeedPage';
 import ExplorePage from './pages/ExplorePage';
@@ -30,6 +31,7 @@ export default function App() {
   const { user } = useAuth();
   return (
     <div className="app-container">
+      {user && <DesktopSidebar />}
       <main className={user ? 'main-content has-nav' : 'main-content'}>
         <Routes>
           <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />

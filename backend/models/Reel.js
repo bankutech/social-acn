@@ -19,4 +19,8 @@ const ReelSchema = new mongoose.Schema({
     thumbnailPublicId: { type: String }
 }, { timestamps: true });
 
+ReelSchema.index({ author: 1, createdAt: -1 });
+ReelSchema.index({ visibility: 1, createdAt: -1 });
+ReelSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Reel', ReelSchema);

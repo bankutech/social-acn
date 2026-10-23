@@ -128,6 +128,12 @@ export default function BottomNav() {
           pointer-events: none;
         }
 
+        @media (min-width: 768px) {
+          .ig-bottom-nav {
+            display: none !important;
+          }
+        }
+
         .ig-bottom-bar {
           pointer-events: auto;
           width: 100%;

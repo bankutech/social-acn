@@ -215,6 +215,19 @@ export default function ExplorePage() {
           padding: 24px 16px;
         }
 
+        @media (min-width: 768px) {
+          .explore-content-area {
+            max-width: 935px;
+            padding: 32px 20px;
+          }
+
+          .explorer-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+            gap: 16px !important;
+          }
+        }
+
         .discovery-header {
           margin-bottom: 24px;
         }

@@ -50,7 +50,8 @@ exports.getReels = async (req, res) => {
         .populate('author', 'name avatarUrl')
         .populate('likes', 'name avatarUrl')
         .populate('comments.author', 'name avatarUrl')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
 
         res.json(reels);
     } catch (error) {

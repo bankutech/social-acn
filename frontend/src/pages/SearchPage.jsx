@@ -39,13 +39,14 @@ export default function SearchPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#000', paddingBottom: 90 }}>
-      {/* Header */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        padding: '12px 16px'
-      }}>
+      <div style={{ maxWidth: 700, margin: '0 auto', width: '100%' }}>
+        {/* Header */}
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 100,
+          background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          padding: '16px'
+        }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12,
           background: 'rgba(255,255,255,0.07)',
@@ -155,6 +156,7 @@ export default function SearchPage() {
             </AnimatePresence>
           </div>
         )}
+      </div>
       </div>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

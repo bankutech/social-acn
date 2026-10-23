@@ -447,6 +447,13 @@ export default function CreatePostPage() {
           padding: 0 20px;
         }
 
+        @media (min-width: 768px) {
+          .page-inner {
+            max-width: 640px;
+            padding: 24px 0 48px;
+          }
+        }
+
         /* ── HEADER ── */
         .page-header {
           display: flex;

@@ -20,4 +20,10 @@ const PostSchema = new mongoose.Schema({
     group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null }
 }, { timestamps: true });
 
+// High performance indexes for feed queries, pagination, and bookmarks
+PostSchema.index({ author: 1, createdAt: -1 });
+PostSchema.index({ createdAt: -1 });
+PostSchema.index({ visibility: 1, createdAt: -1 });
+PostSchema.index({ savedBy: 1 });
+
 module.exports = mongoose.model('Post', PostSchema);

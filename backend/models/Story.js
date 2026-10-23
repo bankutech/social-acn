@@ -11,4 +11,7 @@ const StorySchema = new mongoose.Schema({
     cloudinaryPublicId: { type: String }
 }, { timestamps: true });
 
+StorySchema.index({ author: 1, createdAt: -1 });
+StorySchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Story', StorySchema);

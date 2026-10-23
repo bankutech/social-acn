@@ -39,7 +39,8 @@ exports.getStories = async (req, res) => {
             createdAt: { $gt: new Date(Date.now() - 86400000) }
         })
         .populate('author', 'name avatarUrl')
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
 
         res.json(stories);
     } catch (error) {

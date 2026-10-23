@@ -371,6 +371,17 @@ export default function ChatPage() {
           border-right: 1px solid rgba(255,255,255,0.05);
         }
 
+        @media (min-width: 768px) {
+          .chat-page-v2 {
+            max-width: 1000px;
+            height: calc(100vh - 40px);
+            margin: 20px auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+          }
+        }
+
         .chat-header-v2 {
           display: flex;
           align-items: center;

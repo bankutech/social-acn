@@ -106,7 +106,7 @@ const connectDB = async () => {
         // 1. If remote Atlas URI is provided, attempt connection directly
         if (uri && (uri.includes('mongodb+srv') || uri.includes('@'))) {
             try {
-                await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
+                await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000, maxPoolSize: 50, minPoolSize: 5 });
                 console.log('✅ Connected to MongoDB Atlas successfully');
                 dbConnected = true;
                 return;
@@ -123,7 +123,7 @@ const connectDB = async () => {
         // 2. Try local MongoDB first if running
         try {
             const localUri = (!uri || uri.includes('mongodb+srv') || uri.includes('@')) ? 'mongodb://127.0.0.1:27017/acn_plus' : uri;
-            await mongoose.connect(localUri, { serverSelectionTimeoutMS: 2000 });
+            await mongoose.connect(localUri, { serverSelectionTimeoutMS: 2000, maxPoolSize: 50, minPoolSize: 5 });
             console.log('✅ Connected to local MongoDB successfully');
             dbConnected = true;
             return;

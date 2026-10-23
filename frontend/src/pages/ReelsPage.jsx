@@ -50,15 +50,9 @@ export default function ReelsPage() {
   }
 
   return (
-    <div style={{ height: '100vh', background: '#000', overflow: 'hidden', position: 'relative' }}>
-      {/* Header */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20,
-        padding: '14px 16px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%)',
-        pointerEvents: 'none'
-      }}>
+    <div className="reels-page-wrapper">
+      {/* Mobile Top Header */}
+      <div className="reels-mobile-header">
         <h2 style={{ fontWeight: 700, fontSize: 20, color: 'white', margin: 0 }}>Reels</h2>
         <span style={{
           background: 'rgba(255,255,255,0.15)', color: 'white',
@@ -68,15 +62,11 @@ export default function ReelsPage() {
       </div>
 
       {/* Scroll container */}
-      <div style={{
-        height: '100%',
-        overflowY: 'scroll',
-        scrollSnapType: 'y mandatory',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
-      }}>
+      <div className="reels-scroll-container">
         {reels.map((reel) => (
-          <ReelCard key={reel._id} reel={reel} onDelete={loadReels} currentUser={user} />
+          <div key={reel._id} className="reel-slide-stage">
+            <ReelCard reel={reel} onDelete={loadReels} currentUser={user} />
+          </div>
         ))}
       </div>
     </div>
@@ -206,17 +196,7 @@ export function ReelCard({ reel, onDelete, currentUser }) {
     <div
       ref={cardRef}
       onClick={togglePlay}
-      style={{
-        height: '100vh',
-        scrollSnapAlign: 'start',
-        position: 'relative',
-        background: '#111',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        overflow: 'hidden'
-      }}
+      className="reel-card-container"
     >
       {/* Video */}
       {reel.videoUrl ? (
@@ -535,9 +515,89 @@ export function ReelCard({ reel, onDelete, currentUser }) {
         )}
       </AnimatePresence>
 
-      {/* Spin animation */}
+      {/* Reel Styles */}
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .reels-page-wrapper {
+          height: 100vh;
+          background: #000000;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .reels-scroll-container {
+          height: 100%;
+          overflow-y: scroll;
+          scroll-snap-type: y mandatory;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .reels-scroll-container::-webkit-scrollbar {
+          display: none;
+        }
+
+        .reel-slide-stage {
+          height: 100vh;
+          scroll-snap-align: start;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .reel-card-container {
+          position: relative;
+          background: #111;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          overflow: hidden;
+        }
+
+        /* Mobile View (< 768px) */
+        @media (max-width: 767px) {
+          .reels-mobile-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+            pointer-events: none;
+          }
+
+          .reel-card-container {
+            width: 100%;
+            height: 100vh;
+          }
+        }
+
+        /* Desktop View (>= 768px) */
+        @media (min-width: 768px) {
+          .reels-mobile-header {
+            display: none !important;
+          }
+
+          .reel-slide-stage {
+            padding: 20px 0;
+          }
+
+          .reel-card-container {
+            width: 100%;
+            max-width: 420px;
+            height: calc(100vh - 40px);
+            max-height: 800px;
+            border-radius: 16px;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+          }
+        }
       `}</style>
     </div>
   );
