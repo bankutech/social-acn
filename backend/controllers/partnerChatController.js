@@ -141,15 +141,21 @@ exports.sendPartnerMessage = async (req, res) => {
             io.to(`partner_${chatId}`).emit('partner_new_message', populated);
         }
 
-        // Try to trigger push notification if recipient exists in participants list
+        // Try to trigger push notification if recipient exists in participants list (non-blocking)
         const recipientId = chat.user_one_id.toString() === userId.toString() ? chat.user_two_id : chat.user_one_id;
         if (recipientId) {
-             const sender = await User.findById(userId);
-             sendPushNotification(recipientId, {
-                 title: 'Partner Chat: ' + (sender ? sender.name : 'Partner'),
-                 body: content || 'Shared some media',
-                 url: `/partner-chat/${chatId}`
-             });
+             Promise.resolve().then(async () => {
+                 try {
+                     const sender = req.user?.name ? req.user : await User.findById(userId).lean();
+                     sendPushNotification(recipientId, {
+                         title: 'Partner Chat: ' + (sender ? sender.name : 'Partner'),
+                         body: content || 'Shared some media',
+                         url: `/partner-chat/${chatId}`
+                     });
+                 } catch (err) {
+                     // non-fatal
+                 }
+             }).catch(() => {});
         }
 
         res.status(201).json(populated);

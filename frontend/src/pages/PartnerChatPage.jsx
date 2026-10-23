@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import { getSocket } from '../lib/socket';
+import { compressImage } from '../lib/imageCompressor';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { ArrowLeft, Send, Smile, Camera, X, Palette, Clock, ShieldCheck, MoreVertical, Reply, Edit2, Trash2 } from 'lucide-react';
 
@@ -148,8 +149,36 @@ export default function PartnerChatPage() {
     const content = input;
     const isEditing = !!editingMsg;
     const currentReplyTo = replyingTo;
+    const currentFile = imageFile;
+    const currentPreview = imagePreview;
 
-    if (!isEditing) setInput('');
+    const optimisticId = 'temp_' + Date.now();
+    if (!isEditing) {
+      const optimisticMsg = {
+        _id: optimisticId,
+        chat_id: chat._id,
+        sender_id: {
+          _id: user?._id,
+          name: user?.name,
+          avatarUrl: user?.avatarUrl
+        },
+        message_type: currentFile ? 'image' : 'text',
+        content: content.trim(),
+        image_url: currentPreview || '',
+        replyTo: currentReplyTo,
+        created_at: new Date().toISOString(),
+        expires_at: chat.expires_enabled ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : new Date('9999-12-31').toISOString(),
+        pending: true
+      };
+
+      setMessages(prev => [...prev, optimisticMsg]);
+      setInput('');
+      setImageFile(null);
+      setImagePreview('');
+      setShowImageModal(false);
+      scrollToBottom(true);
+    }
+
     setReplyingTo(null);
     setEditingMsg(null);
 
@@ -162,9 +191,15 @@ export default function PartnerChatPage() {
       } else {
         let image_url = '';
         let cloudinary_public_id = '';
-        if (imageFile) {
+        if (currentFile) {
+          let fileToUpload = currentFile;
+          try {
+            fileToUpload = await compressImage(currentFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
+          } catch (compressErr) {
+            console.warn('Image compression fallback:', compressErr);
+          }
           const fd = new FormData();
-          fd.append('image', imageFile);
+          fd.append('image', fileToUpload);
           const up = await api.upload(`/api/partner-chat/${chat._id}/upload`, fd);
           image_url = up.image_url;
           cloudinary_public_id = up.cloudinary_public_id;
@@ -178,18 +213,25 @@ export default function PartnerChatPage() {
           replyToId: currentReplyTo?._id
         });
 
-        setMessages(prev => [...prev, msg]);
-        if (imagePreview) URL.revokeObjectURL(imagePreview);
-        setImageFile(null);
-        setImagePreview('');
-        setShowImageModal(false);
+        // Replace optimistic message with confirmed server message
+        setMessages(prev => prev.map(m => m._id === optimisticId ? msg : m));
+        if (currentPreview) URL.revokeObjectURL(currentPreview);
 
         getSocket().emit('partner_message', { chatId: chat._id, message: msg });
         scrollToBottom();
       }
     } catch (err) {
       console.error(err);
-      setInput(content);
+      if (!isEditing) {
+        // Rollback optimistic message on failure
+        setMessages(prev => prev.filter(m => m._id !== optimisticId));
+        setInput(content);
+        if (currentFile && currentPreview) {
+          setImageFile(currentFile);
+          setImagePreview(currentPreview);
+          setShowImageModal(true);
+        }
+      }
     }
     setSending(false);
   };
@@ -532,6 +574,8 @@ export default function PartnerChatPage() {
         .pc-theme-opt { padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
         .pc-theme-swatch { width: 30px; height: 30px; border-radius: 50%; }
         
+        .pc-msg-img { max-width: 100%; max-height: 280px; border-radius: 12px; margin-bottom: 6px; display: block; object-fit: cover; cursor: pointer; }
+        .pc-bubble.pending { opacity: 0.75; }
         .pc-typing span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); display: block; animation: bounce 1.2s infinite; }
         .pc-typing span:nth-child(2) { animation-delay: 0.2s; }
         .pc-typing span:nth-child(3) { animation-delay: 0.4s; }
@@ -548,12 +592,12 @@ function PartnerBubble({ msg, isMine, isSelected, theme, onSelect, onReply, onEd
   return (
     <div className={`pc-bubble-row ${isMine ? 'mine' : 'theirs'}`}>
       <motion.div
-        drag="x"
+        drag={msg.pending ? false : "x"}
         dragConstraints={{ left: 0, right: 80 }}
         onDragEnd={(e, info) => info.offset.x > 50 && onReply()}
         style={{ background: isMine ? theme.accent : theme.msgBg, x }}
-        className={`pc-bubble ${isMine ? 'pc-mine' : 'pc-theirs'} ${msg.isDeleted ? 'deleted' : ''}`}
-        onClick={onSelect}
+        className={`pc-bubble ${isMine ? 'pc-mine' : 'pc-theirs'} ${msg.isDeleted ? 'deleted' : ''} ${msg.pending ? 'pending' : ''}`}
+        onClick={msg.pending ? undefined : onSelect}
       >
         <motion.div style={{ position: 'absolute', left: -40, top: '50%', y: '-50%', opacity, scale }}>
             <Reply size={18} color={theme.accent} />
@@ -569,15 +613,21 @@ function PartnerBubble({ msg, isMine, isSelected, theme, onSelect, onReply, onEd
         )}
 
         {msg.message_type === 'image' && msg.image_url && !msg.isDeleted && (
-          <img src={api.getFileUrl(msg.image_url)} className="pc-msg-img" alt="" onClick={() => window.open(api.getFileUrl(msg.image_url), '_blank')} />
+          <img src={api.getFileUrl(msg.image_url)} className="pc-msg-img" alt="" onClick={() => !msg.pending && window.open(api.getFileUrl(msg.image_url), '_blank')} />
         )}
         
-        <p className="pc-bubble-text">{msg.content}</p>
+        {msg.content && <p className="pc-bubble-text">{msg.content}</p>}
         
         <div className="pc-bubble-meta">
-          {msg.isEdited && <span>edited</span>}
-          <span>{formatTime(msg.created_at)}</span>
-          {msg.expires_at && <span className="pc-timer"><Clock size={10} />{getTimeRemaining(msg.expires_at)}</span>}
+          {msg.pending ? (
+            <span style={{ fontStyle: 'italic', opacity: 0.7 }}>sending...</span>
+          ) : (
+            <>
+              {msg.isEdited && <span>edited</span>}
+              <span>{formatTime(msg.created_at)}</span>
+              {msg.expires_at && <span className="pc-timer"><Clock size={10} />{getTimeRemaining(msg.expires_at)}</span>}
+            </>
+          )}
         </div>
       </motion.div>
 

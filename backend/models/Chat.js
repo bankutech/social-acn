@@ -20,7 +20,8 @@ const ChatSchema = new mongoose.Schema({
     isOnline: { type: Boolean, default: false }
 }, { timestamps: true });
 
-// Index for finding chats between two users
+// Index for finding chats between two users and sorting by last message
 ChatSchema.index({ participants: 1 });
+ChatSchema.index({ participants: 1, lastMessageTime: -1 });
 
 module.exports = mongoose.model('Chat', ChatSchema);

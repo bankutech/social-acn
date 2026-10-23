@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import Avatar from '../components/Avatar';
 import { getSocket } from '../lib/socket';
+import { compressImage } from '../lib/imageCompressor';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { ArrowLeft, Send, Smile, Image as ImageIcon, Video as VideoIcon, X, MoreVertical, Reply, Edit2, Trash2 } from 'lucide-react';
 
@@ -113,8 +114,35 @@ export default function ChatPage() {
     const isEditing = !!editingMsg;
     const currentReplyTo = replyingTo;
 
-    // Clear UI state immediately for responsiveness
-    if (!isEditing) setInput('');
+    // Cache picked media for background upload
+    const pickedFile = mediaFile;
+    const pickedType = mediaType;
+    const pickedPreview = mediaPreview;
+
+    // Generate optimistic message for 0ms instantaneous display
+    const optimisticId = 'temp_' + Date.now();
+    if (!isEditing) {
+      const optimisticMsg = {
+        _id: optimisticId,
+        sender: user,
+        content,
+        mediaUrl: pickedPreview || '',
+        message_type: pickedType === 'video' ? 'video' : (pickedFile ? 'image' : 'text'),
+        timestamp: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        pending: true,
+        replyTo: currentReplyTo
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+      scrollToBottom();
+
+      // Clear input & preview immediately
+      setInput('');
+      setMediaFile(null);
+      setMediaPreview('');
+      setMediaType('');
+    }
+
     setReplyingTo(null);
     setEditingMsg(null);
 
@@ -127,12 +155,21 @@ export default function ChatPage() {
       } else {
         let mediaUrl = '';
         let message_type = 'text';
-        if (mediaFile) {
+        if (pickedFile) {
+          let fileToUpload = pickedFile;
+          // Compress image client-side before sending to save 95% bandwidth and upload time
+          if (pickedType !== 'video') {
+            try {
+              fileToUpload = await compressImage(pickedFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
+            } catch (err) {
+              console.warn('Image compression fallback:', err);
+            }
+          }
           const fd = new FormData();
-          fd.append('file', mediaFile);
-          const up = await api.upload(mediaType === 'video' ? '/api/upload/video/chat' : '/api/upload/image/chat', fd);
+          fd.append('file', fileToUpload);
+          const up = await api.upload(pickedType === 'video' ? '/api/upload/video/chat' : '/api/upload/image/chat', fd);
           mediaUrl = up.url;
-          message_type = mediaType === 'video' ? 'video' : 'image';
+          message_type = pickedType === 'video' ? 'video' : 'image';
         }
         
         const msg = await api.post('/api/chat/send', { 
@@ -143,17 +180,19 @@ export default function ChatPage() {
             replyToId: currentReplyTo?._id
         });
         
-        setMessages(prev => [...prev, msg]);
+        // Replace optimistic message with confirmed server response
+        setMessages(prev => prev.map(m => m._id === optimisticId ? msg : m));
         getSocket().emit('private_message', { receiverId: userId, message: msg, chatId: chat?._id });
-        if (mediaPreview) URL.revokeObjectURL(mediaPreview);
-        setMediaFile(null);
-        setMediaPreview('');
-        setMediaType('');
+        if (pickedPreview) URL.revokeObjectURL(pickedPreview);
         scrollToBottom();
       }
     } catch (e) {
       setError(e?.message || 'Failed to send message');
-      setInput(content);
+      if (!isEditing) {
+        // Rollback optimistic message on failure
+        setMessages(prev => prev.filter(m => m._id !== optimisticId));
+        setInput(content);
+      }
     }
   };
 

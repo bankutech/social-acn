@@ -102,11 +102,23 @@ exports.sendMessage = async (req, res) => {
         chat.lastMessageTime = new Date();
         await chat.save();
 
-        // Populate to return full object
-        const savedChat = await Chat.findById(chat._id)
-            .populate('messages.sender', 'name avatarUrl');
+        // Populate only the latest message to avoid querying and hydrating entire chat history
+        const savedChat = await Chat.findById(chat._id, { messages: { $slice: -1 } })
+            .populate('messages.sender', 'name avatarUrl')
+            .lean();
         
-        const newMessage = savedChat.messages[savedChat.messages.length - 1];
+        const newMessage = savedChat && savedChat.messages && savedChat.messages[0] 
+            ? savedChat.messages[0] 
+            : {
+                ...message,
+                _id: chat.messages[chat.messages.length - 1]._id,
+                sender: {
+                    _id: userId,
+                    name: req.user.name,
+                    avatarUrl: req.user.avatarUrl
+                },
+                createdAt: new Date()
+            };
 
         // Emit real-time message to recipient's room
         const io = req.app.get('io');
@@ -118,15 +130,16 @@ exports.sendMessage = async (req, res) => {
             });
         }
 
-        // Send Push Notification
-        const sender = await User.findById(userId);
+        // Send Push Notification asynchronously in background (don't block response)
         const recipientStrId = chat.participants.find(p => p.toString() !== userId.toString());
         if (recipientStrId) {
-            sendPushNotification(recipientStrId, {
-                title: sender ? sender.name : 'New Message',
-                body: content || (normalizedType === 'image' ? 'Sent an image' : 'Sent a file'),
-                url: `/chat/${userId}`
-            });
+            Promise.resolve().then(() => {
+                sendPushNotification(recipientStrId, {
+                    title: req.user?.name || 'New Message',
+                    body: content || (normalizedType === 'image' ? 'Sent an image' : 'Sent a file'),
+                    url: `/chat/${userId}`
+                });
+            }).catch(() => {});
         }
 
         res.status(201).json(newMessage);
