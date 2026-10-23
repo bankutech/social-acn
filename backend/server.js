@@ -34,7 +34,6 @@ const checkDbConnection = async (req, res, next) => {
 // Make io available to routes
 app.set('io', io);
 
-// Middleware
 // Enable CORS for web and mobile clients
 app.use(cors({
     origin: true,
