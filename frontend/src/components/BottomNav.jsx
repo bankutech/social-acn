@@ -1,54 +1,126 @@
-import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { useLocation, NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Compass, Plus, MessageCircle, User, Bell, Search, Users } from 'lucide-react';
-import NotificationPanel from './NotificationPanel';
-import api from '../lib/api';
+import { Home, Search, PlusSquare, Film, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getSocket } from '../lib/socket';
+import Avatar from './Avatar';
 
 export default function BottomNav() {
   const location = useLocation();
   const { user } = useAuth();
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    if (!user) return;
-    
-    // Initial fetch
-    api.get('/api/notifications').then(data => {
-      setUnreadCount(data.filter(n => !n.read).length);
-    }).catch(() => {});
-
-    // Use the shared socket singleton — no duplicate connection
-    const socket = getSocket();
-    const notifEvent = `notification_${user._id || user.id}`;
-    
-    const handleNotif = () => setUnreadCount(prev => prev + 1);
-    socket.on(notifEvent, handleNotif);
-
-    return () => socket.off(notifEvent, handleNotif);
-  }, [user]);
-
-  const navItems = [
-    { path: '/',        icon: Home,          label: 'Feed'    },
-    { path: '/search',  icon: Search,        label: 'Search'  },
-    { path: '/create',  icon: Plus,          label: 'Create', isCreate: true },
-    { action: () => setShowNotifications(true), icon: Bell, label: 'Alerts', badge: unreadCount > 0 },
-    { path: '/profile', icon: User,          label: 'You'     },
-  ];
-
+  // Hide on auth pages or active one-on-one / partner chats
   const hideOn = ['/login', '/signup'];
   if (hideOn.includes(location.pathname)) return null;
   if (location.pathname.match(/^\/chat\/.+/) || location.pathname.match(/^\/partner-chat\/.+/)) return null;
 
+  const currentUserId = user?._id || user?.id;
+
+  const navItems = [
+    {
+      path: '/',
+      label: 'Home',
+      renderIcon: (isActive) => (
+        <Home
+          size={24}
+          color={isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.65)'}
+          strokeWidth={isActive ? 2.5 : 1.75}
+          fill={isActive ? '#ffffff' : 'none'}
+        />
+      ),
+      isActive: location.pathname === '/'
+    },
+    {
+      path: '/explore',
+      label: 'Search',
+      renderIcon: (isActive) => (
+        <Search
+          size={24}
+          color={isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.65)'}
+          strokeWidth={isActive ? 2.75 : 1.75}
+        />
+      ),
+      isActive: location.pathname === '/explore' || location.pathname === '/search'
+    },
+    {
+      path: '/create',
+      label: 'Create',
+      renderIcon: (isActive) => (
+        <PlusSquare
+          size={25}
+          color={isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.65)'}
+          strokeWidth={isActive ? 2.5 : 1.75}
+        />
+      ),
+      isActive: location.pathname === '/create'
+    },
+    {
+      path: '/reels',
+      label: 'Reels',
+      renderIcon: (isActive) => (
+        <Film
+          size={24}
+          color={isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.65)'}
+          strokeWidth={isActive ? 2.5 : 1.75}
+          fill={isActive ? 'rgba(255, 255, 255, 0.2)' : 'none'}
+        />
+      ),
+      isActive: location.pathname === '/reels'
+    },
+    {
+      path: '/profile',
+      label: 'Profile',
+      renderIcon: (isActive) => {
+        if (user?.avatarUrl) {
+          return (
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                padding: 1.5,
+                border: isActive ? '2px solid #ffffff' : '1.5px solid transparent',
+                transition: 'border-color 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Avatar src={user.avatarUrl} name={user.name} size={24} />
+            </div>
+          );
+        }
+        return (
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: isActive ? '2px solid #ffffff' : '1.5px solid transparent'
+            }}
+          >
+            <User
+              size={23}
+              color={isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.65)'}
+              strokeWidth={isActive ? 2.5 : 1.75}
+            />
+          </div>
+        );
+      },
+      isActive: location.pathname.startsWith('/profile')
+    }
+  ];
+
   return (
     <>
       <style>{`
-        .bnav-root {
+        .ig-bottom-nav {
           position: fixed;
-          bottom: 0; left: 0; right: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
           z-index: 1000;
           display: flex;
           justify-content: center;
@@ -56,157 +128,59 @@ export default function BottomNav() {
           pointer-events: none;
         }
 
-        .bnav-bar {
+        .ig-bottom-bar {
           pointer-events: auto;
           width: 100%;
           max-width: 480px;
-          background: rgba(255, 255, 255, 0.92);
-          backdrop-filter: blur(24px) saturate(160%);
-          -webkit-backdrop-filter: blur(24px) saturate(160%);
-          border-top: 0.5px solid var(--border-color);
+          height: 52px;
+          background: rgba(0, 0, 0, 0.88);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border-top: 0.5px solid rgba(255, 255, 255, 0.12);
           display: flex;
-          align-items: stretch;
-          padding: 8px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+          align-items: center;
+          justify-content: space-around;
+          padding: 0 8px;
         }
 
-        .bnav-item {
+        .ig-nav-item {
           flex: 1;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 5px;
+          height: 100%;
           text-decoration: none;
-          padding: 4px 0;
           -webkit-tap-highlight-color: transparent;
           position: relative;
         }
-
-        .bnav-icon-wrap {
-          width: 44px;
-          height: 30px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background 0.18s ease;
-          position: relative;
-        }
-
-        .bnav-icon-wrap.active {
-          background: var(--accent-bg);
-        }
-
-        .bnav-create {
-          width: 44px;
-          height: 30px;
-          border-radius: 10px;
-          background: var(--accent);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .bnav-label {
-          font-family: var(--font);
-          font-size: 10px;
-          font-weight: 500;
-          letter-spacing: 0.2px;
-          line-height: 1;
-          transition: color 0.18s ease;
-        }
-
-        .bnav-label.active {
-          font-weight: 600;
-          color: var(--accent);
-        }
-
-        .bnav-label.inactive {
-          color: var(--text-muted);
-        }
-
-        .bnav-badge {
-          position: absolute;
-          top: 2px;
-          right: 6px;
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: var(--danger);
-          border: 1.5px solid white;
-        }
       `}</style>
 
-      <nav className="bnav-root" aria-label="Main navigation">
-        <div className="bnav-bar">
-          {navItems.map(({ path, action, icon: Icon, label, isCreate, badge }) => {
-            const isActive = path ? (path === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(path)) : false;
-
-            const content = (
+      <nav className="ig-bottom-nav" aria-label="Main Navigation">
+        <div className="ig-bottom-bar">
+          {navItems.map(({ path, label, renderIcon, isActive }) => (
+            <NavLink
+              key={path}
+              to={path}
+              aria-label={label}
+              className="ig-nav-item"
+            >
               <motion.div
-                whileTap={{ scale: 0.80 }}
-                transition={{ type: 'spring', stiffness: 480, damping: 22 }}
-                style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
+                whileTap={{ scale: 0.78 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 44,
+                  height: 44
+                }}
               >
-                {isCreate ? (
-                  <div className="bnav-create">
-                    <Icon size={17} color="#ffffff" strokeWidth={2.5} />
-                  </div>
-                ) : (
-                  <div className={`bnav-icon-wrap ${isActive ? 'active' : ''}`}>
-                    <Icon
-                      size={20}
-                      color={isActive ? 'var(--accent)' : 'var(--text-muted)'}
-                      strokeWidth={isActive ? 2.2 : 1.6}
-                    />
-                  </div>
-                )}
-
-                {badge && <div className="bnav-badge" />}
-
-                <span className={`bnav-label ${isActive ? 'active' : 'inactive'}`}>
-                  {label}
-                </span>
-
-                {isActive && !isCreate && (
-                  <motion.div
-                    layoutId="bnav-active-dot"
-                    style={{
-                      width: 3,
-                      height: 3,
-                      borderRadius: '50%',
-                      background: 'var(--accent)',
-                      position: 'absolute',
-                      bottom: -6,
-                    }}
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }}
-                  />
-                )}
+                {renderIcon(isActive)}
               </motion.div>
-            );
-
-            return path ? (
-              <NavLink key={path} to={path} className="bnav-item">
-                {content}
-              </NavLink>
-            ) : (
-              <div key={label} onClick={action} className="bnav-item" style={{ cursor: 'pointer' }}>
-                {content}
-              </div>
-            );
-          })}
+            </NavLink>
+          ))}
         </div>
       </nav>
-
-      <NotificationPanel 
-        isOpen={showNotifications} 
-        onClose={() => {
-            setShowNotifications(false);
-            setUnreadCount(0); // Optimistic clear
-        }} 
-      />
     </>
   );
 }

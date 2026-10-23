@@ -29,10 +29,9 @@ export default function StoryBar({ stories = [], onRefresh }) {
     <>
       <div style={{
         display: 'flex',
-        gap: 12,
-        padding: '12px 16px',
+        gap: 14,
+        padding: '12px 14px',
         overflowX: 'auto',
-        borderBottom: '0.5px solid rgba(255,255,255,0.08)',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
         WebkitOverflowScrolling: 'touch'

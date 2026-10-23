@@ -94,7 +94,7 @@ export default function NotificationPanel({ isOpen, onClose }) {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <h2 style={{ color: 'white', margin: 0, fontSize: 20, fontWeight: 700 }}>Notifications</h2>
-              <button onClick={handleMarkAllAsRead} style={{ background: 'none', border: 'none', color: '#a78bfa', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
+              <button onClick={handleMarkAllAsRead} style={{ background: 'none', border: 'none', color: '#0095f6', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
                 Mark all read
               </button>
             </div>
@@ -111,7 +111,7 @@ export default function NotificationPanel({ isOpen, onClose }) {
                 notifications.map(n => (
                   <div key={n._id} onClick={(e) => handleMarkAsRead(n._id, e)} style={{
                     display: 'flex', gap: 12, padding: '16px 20px',
-                    background: n.read ? 'transparent' : 'rgba(167, 139, 250, 0.05)',
+                    background: n.read ? 'transparent' : 'rgba(0, 149, 246, 0.08)',
                     borderBottom: '1px solid rgba(255,255,255,0.03)',
                     cursor: 'pointer', transition: 'background 0.2s'
                   }}>
@@ -124,7 +124,7 @@ export default function NotificationPanel({ isOpen, onClose }) {
                         {new Date(n.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                    {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#a78bfa', marginTop: 6 }} />}
+                    {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0095f6', marginTop: 6 }} />}
                   </div>
                 ))
               )}

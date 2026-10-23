@@ -61,7 +61,7 @@ export default function ExplorePage() {
           <Search size={18} className="search-icon-inside" />
           <input
             className="premium-search-input"
-            placeholder="Search the ACN+ network..."
+            placeholder="Search"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -205,8 +205,8 @@ export default function ExplorePage() {
         }
         .premium-search-input:focus {
           background: rgba(255, 255, 255, 0.08);
-          border-color: #a78bfa;
-          box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.1);
+          border-color: #0095f6;
+          box-shadow: 0 0 0 4px rgba(0, 149, 246, 0.15);
         }
 
         .explore-content-area {
@@ -224,7 +224,7 @@ export default function ExplorePage() {
           gap: 8px;
           font-size: 11px;
           font-weight: 800;
-          color: #a78bfa;
+          color: #0095f6;
           text-transform: uppercase;
           letter-spacing: 1.5px;
           margin-bottom: 8px;

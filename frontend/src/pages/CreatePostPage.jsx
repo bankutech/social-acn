@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Image, Code, Type, X, Video, LayoutGrid as Grid } from 'lucide-react';
+import { ArrowLeft, Image, Code, Type, X, Video, LayoutGrid as Grid, Sparkles } from 'lucide-react';
 
 export default function CreatePostPage() {
   const { user } = useAuth();
@@ -26,7 +26,7 @@ export default function CreatePostPage() {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (createMode === 'post') {
+    if (createMode === 'post' || createMode === 'story') {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setPostType('image');
@@ -57,6 +57,21 @@ export default function CreatePostPage() {
         }
         await api.post('/api/posts', { content, type: postType, imageUrl, cloudinaryPublicId, codeSnippet: postType === 'code' ? codeSnippet : undefined, codeLanguage: postType === 'code' ? codeLanguage : undefined });
         navigate('/');
+      } else if (createMode === 'story') {
+        if (!content.trim() && !imageFile) return setLoading(false);
+        let imageUrl = '', cloudinaryPublicId = '';
+        if (imageFile) {
+          const fd = new FormData(); fd.append('file', imageFile);
+          const r = await api.upload('/api/upload/image/posts', fd);
+          imageUrl = r.url; cloudinaryPublicId = r.filename;
+        }
+        await api.post('/api/stories', {
+          content,
+          type: imageFile ? 'image' : 'text',
+          imageUrl,
+          cloudinaryPublicId
+        });
+        navigate('/');
       } else if (createMode === 'reel') {
         if (!reelTitle.trim() || !reelVideoFile) return setLoading(false);
         const fd = new FormData(); fd.append('file', reelVideoFile);
@@ -71,12 +86,14 @@ export default function CreatePostPage() {
   const isSubmitDisabled = () => {
     if (loading) return true;
     if (createMode === 'post') return !content.trim() && !imageFile && !codeSnippet.trim();
+    if (createMode === 'story') return !content.trim() && !imageFile;
     if (createMode === 'reel') return !reelTitle.trim() || !reelVideoFile;
     return true;
   };
 
   const modes = [
     { key: 'post', icon: Grid, label: 'Post' },
+    { key: 'story', icon: Sparkles, label: 'Story' },
     { key: 'reel', icon: Video, label: 'Reel' },
   ];
 
@@ -99,7 +116,7 @@ export default function CreatePostPage() {
               animate={{ opacity: 1, y: 0 }}
               className="header-eyebrow"
             >
-              {createMode === 'post' ? 'New post' : 'New reel'}
+              {createMode === 'post' ? 'New post' : createMode === 'story' ? 'New story' : 'New reel'}
             </motion.span>
           </div>
 
@@ -230,6 +247,47 @@ export default function CreatePostPage() {
               </div>
             )}
 
+            {/* ── STORY ── */}
+            {createMode === 'story' && (
+              <div className="editor-card" style={{ maxWidth: 420, margin: '0 auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <div className="ig-story-ring" style={{ padding: 2 }}>
+                    <div style={{ padding: 2, background: '#000', borderRadius: '50%' }}>
+                      <img src={user?.avatarUrl || 'https://i.pravatar.cc/150'} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: 14 }}>Your Story</strong>
+                    <div style={{ fontSize: 11, color: '#8e8e8e' }}>Visible to followers for 24 hours</div>
+                  </div>
+                </div>
+
+                <div className="upload-area" style={{ minHeight: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {imagePreview ? (
+                    <div className="preview-wrap" style={{ width: '100%', maxHeight: 360, overflow: 'hidden', borderRadius: 12 }}>
+                      <img src={imagePreview} alt="Story Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button className="remove-btn" onClick={removeFile}><X size={14} /></button>
+                    </div>
+                  ) : (
+                    <label className="upload-label" style={{ width: '100%', cursor: 'pointer' }}>
+                      <input type="file" accept="image/*" onChange={handleFileSelect} ref={fileInputRef} hidden />
+                      <div className="upload-icon"><Sparkles size={28} strokeWidth={1.5} color="#0095f6" /></div>
+                      <strong>Add photo to story</strong>
+                      <span>Share a moment, snapshot, or learning tip</span>
+                    </label>
+                  )}
+                </div>
+
+                <textarea
+                  className="main-textarea"
+                  placeholder="Add a story caption or text overlay…"
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                  rows={3}
+                  style={{ marginTop: 14 }}
+                />
+              </div>
+            )}
 
             {/* ── REEL ── */}
             {createMode === 'reel' && (
@@ -300,8 +358,9 @@ export default function CreatePostPage() {
           transition: background 1.2s ease;
           filter: blur(100px);
         }
-        .blob-post  { background: #5eead4; }
-        .blob-reel  { background: #818cf8; }
+        .blob-post  { background: #0095f6; }
+        .blob-story { background: #ec4899; }
+        .blob-reel  { background: #8b5cf6; }
 
         .page-inner {
           position: relative;

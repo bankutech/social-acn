@@ -193,11 +193,11 @@ export default function ProfilePage() {
           <div className="section-tab-header">
             <button className={`tab-btn ${activeTab === 'posts' ? 'active-tab' : ''}`} onClick={() => setActiveTab('posts')}>
               <Grid3X3 size={18} />
-              <span>{BRAND.feedTitle}</span>
+              <span>POSTS</span>
             </button>
             <button className={`tab-btn ${activeTab === 'reels' ? 'active-tab' : ''}`} onClick={() => setActiveTab('reels')}>
               <Film size={18} />
-              <span>Reels</span>
+              <span>REELS</span>
             </button>
           </div>
 
