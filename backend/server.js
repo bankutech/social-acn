@@ -35,8 +35,7 @@ const checkDbConnection = async (req, res, next) => {
 app.set('io', io);
 
 // Middleware
-// Middleware
-// TEMPORARY: Allow all origins to debug "Failed to Fetch"
+// Enable CORS for web and mobile clients
 app.use(cors({
     origin: true,
     credentials: true
