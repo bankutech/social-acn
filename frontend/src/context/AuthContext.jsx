@@ -66,9 +66,11 @@ export function AuthProvider({ children }) {
   };
 
   const updateUser = (updates) => {
-    const updated = { ...user, ...updates };
-    localStorage.setItem('acn_user', JSON.stringify(updated));
-    setUser(updated);
+    setUser(prev => {
+      const updated = { ...prev, ...updates };
+      localStorage.setItem('acn_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (

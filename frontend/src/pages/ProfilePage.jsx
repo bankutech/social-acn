@@ -13,14 +13,13 @@ export default function ProfilePage() {
   const { userId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
+  const isOwnProfile = !userId || userId === user?._id || userId === user?.id;
+  const [profile, setProfile] = useState(isOwnProfile && user ? user : null);
   const [posts, setPosts] = useState([]);
   const [reels, setReels] = useState([]);
   const [activeTab, setActiveTab] = useState('posts');
   const [isFollowing, setIsFollowing] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const isOwnProfile = !userId || userId === user?._id;
+  const [loading, setLoading] = useState(!user);
 
   const loadProfile = async () => {
     try {

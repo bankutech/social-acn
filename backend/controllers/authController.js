@@ -242,19 +242,36 @@ exports.updateProfile = async (req, res) => {
 
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        if (name) user.name = name;
-        if (bio !== undefined) user.bio = bio;
-        if (skills) user.skills = skills;
+        if (name !== undefined) {
+            if (typeof name !== 'string' || !name.trim()) {
+                return res.status(400).json({ message: 'Name cannot be empty' });
+            }
+            user.name = name.trim();
+        }
+        if (bio !== undefined) user.bio = typeof bio === 'string' ? bio.trim() : bio;
+        if (skills !== undefined && Array.isArray(skills)) user.skills = skills;
         
-        // If updating avatar, we should ideally delete the old one from Cloudinary
-        // However, we'll keep it simple for now and just update the fields
         if (avatarUrl) {
             user.avatarUrl = avatarUrl;
             if (avatarPublicId) user.avatarPublicId = avatarPublicId;
         }
 
         await user.save();
-        res.json(user);
+        
+        const token = req.headers.authorization ? req.headers.authorization.split(' ')[1] : generateToken(user._id);
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            avatarUrl: user.avatarUrl,
+            avatarPublicId: user.avatarPublicId,
+            bio: user.bio,
+            skills: user.skills,
+            studyStreak: user.studyStreak,
+            followers: user.followers,
+            following: user.following,
+            token
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
 const { 
     registerUser, loginUser, googleLogin, getUserProfile, getOtherProfile,
     updateProfile, toggleFollow, exploreUsers, searchUsers, getAllUsers, pushSubscribe, getVapidPublicKey
@@ -25,10 +26,19 @@ router.post('/push/subscribe', protect, pushSubscribe);
 // Avatar upload
 router.post('/avatar', protect, setUploadType('avatars'), upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file' });
-    const url = req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))
-        ? req.file.path
-        : `/uploads/${req.file.filename}`;
-    res.json({ url, filename: req.file.filename });
+    let url;
+    if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        url = req.file.path;
+    } else if (req.file.buffer) {
+        url = `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString('base64')}`;
+    } else if (process.env.VERCEL && req.file.path && fs.existsSync(req.file.path)) {
+        const buf = fs.readFileSync(req.file.path);
+        url = `data:${req.file.mimetype || 'image/jpeg'};base64,${buf.toString('base64')}`;
+    } else {
+        url = `/uploads/${req.file.filename}`;
+    }
+    const filename = req.file.filename || `${Date.now()}-avatar`;
+    res.json({ url, filename });
 });
 
 module.exports = router;

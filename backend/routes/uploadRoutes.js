@@ -1,11 +1,19 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
 const { protect } = require('../middleware/auth');
 const { upload } = require('../config/upload');
 
 const getFileUrl = (file) => {
     if (file.path && (file.path.startsWith('http://') || file.path.startsWith('https://'))) {
         return file.path;
+    }
+    if (file.buffer) {
+        return `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+    }
+    if (process.env.VERCEL && file.path && fs.existsSync(file.path)) {
+        const buf = fs.readFileSync(file.path);
+        return `data:${file.mimetype || 'image/jpeg'};base64,${buf.toString('base64')}`;
     }
     return `/uploads/${file.filename}`;
 };

@@ -43,22 +43,26 @@ if (hasCloudinary) {
         storage = multer.memoryStorage();
     }
 } else {
-    // In serverless, writable directory is /tmp
-    const uploadDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, '..', 'uploads');
-    try {
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        storage = multer.diskStorage({
-            destination: (req, file, cb) => cb(null, uploadDir),
-            filename: (req, file, cb) => {
-                const safeName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-                const unique = `${Date.now()}-${safeName}`;
-                cb(null, unique);
-            }
-        });
-    } catch {
+    // In serverless, memory storage preserves file buffer for Data URLs
+    if (process.env.VERCEL) {
         storage = multer.memoryStorage();
+    } else {
+        const uploadDir = path.join(__dirname, '..', 'uploads');
+        try {
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            storage = multer.diskStorage({
+                destination: (req, file, cb) => cb(null, uploadDir),
+                filename: (req, file, cb) => {
+                    const safeName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+                    const unique = `${Date.now()}-${safeName}`;
+                    cb(null, unique);
+                }
+            });
+        } catch {
+            storage = multer.memoryStorage();
+        }
     }
 }
 
