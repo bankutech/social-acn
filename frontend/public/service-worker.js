@@ -1,30 +1,20 @@
-const CACHE_NAME = 'acn-plus-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
+const CACHE_NAME = 'acn-plus-v2';
 
-self.addEventListener('install', event => {
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
+    caches.keys().then(keys => Promise.all(
+      keys.map(key => caches.delete(key))
+    )).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
+  // Always fetch fresh network content; fallback to cache only when completely offline
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request).catch(() => {
-          // Fallback logic could go here
-        });
-      })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });

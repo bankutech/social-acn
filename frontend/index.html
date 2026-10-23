@@ -9,15 +9,18 @@
     <meta name="theme-color" content="#0C49A2">
     <title>ACN+</title>
   </head>
-  <body>
+  <body style="background-color: #000000; color: #ffffff; margin: 0; min-height: 100vh;">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for (let reg of registrations) {
+            reg.update();
+          }
+        });
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js').catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
+          navigator.serviceWorker.register('/service-worker.js').catch(() => {});
         });
       }
     </script>
